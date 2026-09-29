@@ -1,0 +1,54 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: melodic-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_NAME: Melodic
+      APP_ENV: local
+      APP_KEY: base64:V0pVZk9xS3h4c3R4Qm1Qb3d6R2h5TnNqQW1TQ3V4eGs=
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      APP_LOCALE: es
+      DB_CONNECTION: sqlite
+      DB_DATABASE: /var/lib/melodic/database.sqlite
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      FILESYSTEM_DISK: local
+      # Conexión reservada para la futura migración a MongoDB.
+      MONGODB_URI: mongodb://root:root@mongodb:27017/melodic?authSource=admin
+      MONGODB_DATABASE: melodic
+    volumes:
+      - app-storage:/var/www/html/storage
+      - app-database:/var/lib/melodic
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:8.0
+    container_name: melodic-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_DATABASE: melodic
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  app-storage:
+  app-database:
+  mongodb-data:
