@@ -165,6 +165,20 @@ Luego abre tu navegador y visita:
 http://localhost:8000
 ```
 
+### Entorno local con Docker
+
+El entorno local se puede levantar con Docker Compose. Este arranque crea los servicios de Laravel, MySQL y MongoDB; la aplicación usa MySQL como fuente relacional y deja MongoDB disponible para las siguientes etapas de la migración.
+
+```bash
+docker compose up --build --detach
+```
+
+Después abre [localhost:8000](http://localhost:8000). Los servicios locales quedan disponibles en los puertos `3306` (MySQL) y `27018` (MongoDB; se publica así para evitar conflictos con otras instancias locales). Para detenerlos sin borrar los datos persistidos:
+
+```bash
+docker compose down
+```
+
 ---
 
 ## 👤 Usuarios de prueba
