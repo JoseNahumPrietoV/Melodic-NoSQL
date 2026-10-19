@@ -5,14 +5,12 @@ services:
       dockerfile: Dockerfile
     container_name: melodic-app
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     environment:
       APP_NAME: Melodic
       APP_ENV: ${APP_ENV:-production}
       APP_KEY: ${APP_KEY:?APP_KEY is required}
       APP_DEBUG: ${APP_DEBUG:-false}
-      APP_URL: http://localhost:8000
+      APP_URL: https://localhost
       APP_LOCALE: es
       DB_CONNECTION: mysql
       DB_HOST: mysql
@@ -22,6 +20,7 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
       SESSION_DRIVER: database
       SESSION_CONNECTION: mysql
+      SESSION_SECURE_COOKIE: "true"
       CACHE_STORE: database
       DB_CACHE_CONNECTION: mysql
       QUEUE_CONNECTION: database
@@ -43,12 +42,26 @@ services:
       mongodb:
         condition: service_healthy
 
+  proxy:
+    image: caddy:2.10
+    container_name: melodic-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
   mysql:
     image: mysql:8.4
     container_name: melodic-mysql
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     environment:
       MYSQL_DATABASE: melodic
       MYSQL_USER: melodic
@@ -85,7 +98,7 @@ services:
         && exec docker-entrypoint.sh mongod --replSet rs0 --keyFile /data/configdb/keyfile --bind_ip_all
         --tlsMode requireTLS --tlsCertificateKeyFile /data/configdb/server.pem
         --tlsCAFile /run/secrets/mongodb_tls_ca --tlsAllowConnectionsWithoutCertificates
-        --tlsDisabledProtocols TLS1_0,TLS1_1
+        --tlsDisabledProtocols TLS1_0,TLS1_1 --tlsCipherConfig ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20
     secrets:
       - mongodb_keyfile
       - mongodb_tls_ca
@@ -119,6 +132,8 @@ secrets:
     file: ./docker/mongo/tls/server.pem
 
 volumes:
+  caddy-data:
+  caddy-config:
   app-storage:
   app-database:
   mysql-data:

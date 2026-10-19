@@ -145,6 +145,7 @@ class VerifyMongoMigration extends Command
         $actual = [];
 
         foreach ($this->target->selectCollection('playlists')->aggregate([
+            ['$match' => ['legacy_id' => ['$exists' => true]]],
             ['$project' => ['legacy_id' => 1, 'total' => ['$size' => ['$ifNull' => ['$songs', []]]]]],
         ]) as $playlist) {
             $actual[$playlist['legacy_id']] = $playlist['total'];

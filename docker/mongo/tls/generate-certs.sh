@@ -14,7 +14,7 @@ openssl req -newkey rsa:4096 -nodes \
     -subj "/CN=mongodb" \
     -keyout "$dir/server.key" -out "$dir/server.csr"
 
-printf 'subjectAltName = DNS:mongodb, DNS:localhost, IP:127.0.0.1\nextendedKeyUsage = serverAuth, clientAuth\n' > "$dir/server.ext"
+printf 'subjectAltName = DNS:mongodb, DNS:localhost, IP:127.0.0.1, IP:10.8.0.1\nextendedKeyUsage = serverAuth, clientAuth\n' > "$dir/server.ext"
 
 openssl x509 -req -days "$days" -in "$dir/server.csr" \
     -CA "$dir/ca.pem" -CAkey "$dir/ca.key" -set_serial "0x$(openssl rand -hex 16)" \

@@ -1,5 +1,7 @@
 # Manual de comandos
 
+Guía para instalar y levantar el entorno. Los comandos de operación (conexión, usuarios, índices, respaldo, firewall y VPN) están en `docs/mongodb/comandos.md`.
+
 ## Entorno local
 
 ```bash
@@ -65,9 +67,49 @@ El corte a MongoDB y su reversión están en `docs/mongodb/03-corte-y-reversion.
 
 | Servicio | Desde el host | Dentro de Docker |
 |---|---|---|
-| App | `localhost:8000` | `app:8000` |
-| MySQL | `localhost:3306` | `mysql:3306` |
+| App | `https://localhost` (Caddy; `http://` redirige) | `app:8000` |
+| MySQL | `127.0.0.1:3306` | `mysql:3306` |
 | MongoDB | Solo con `compose.localhost.yaml`: `127.0.0.1:27018` | `mongodb:27017` |
+
+## HTTPS
+
+Caddy sirve la app en `https://localhost` con TLS 1.2 y 1.3, HSTS y redirección desde `http://`. El certificado lo firma su CA interna; para que el navegador y `curl` confíen en él, exportar la CA:
+
+```bash
+docker cp melodic-proxy:/data/caddy/pki/authorities/local/root.crt caddy-root.crt
+curl -I --cacert caddy-root.crt https://localhost
+```
+
+Después importar `caddy-root.crt` en el navegador o en el sistema (en Arch: `sudo trust anchor caddy-root.crt`).
+
+## Firewall
+
+`docker/firewall/ufw-setup.sh` deja el host con entrada denegada salvo 80/tcp, 443/tcp, 51820/udp y el 22 solo desde la red de la VPN (`VPN_SUBNET`, por defecto `172.30.80.0/24`). También agrega a `/etc/ufw/after.rules` las reglas de la cadena `DOCKER-USER`, porque Docker se salta ufw en los puertos publicados. No borra reglas existentes y se puede repetir. Aplicar con una consola local abierta:
+
+```bash
+sudo sh docker/firewall/ufw-setup.sh
+sudo ufw status verbose
+sudo iptables -S DOCKER-USER
+```
+
+Revertir: borrar el bloque `MELODIC DOCKER-USER` de `/etc/ufw/after.rules`, quitar las reglas con `sudo ufw delete allow 80/tcp` (y las demás) y ejecutar `sudo ufw reload`.
+
+## VPN (WireGuard)
+
+`compose.vpn.yaml` agrega un servidor WireGuard en `10.8.0.0/24` con un peer por integrante (`personaA`, `personaB`). Por la VPN solo se alcanzan MongoDB en `10.8.0.1:27017` y el SSH del host. Las claves se generan en `docker/wireguard/config/`, que no se versiona. Llenar `VPN_SERVER_URL` en `.env` con la IP o el dominio del host y levantar:
+
+```bash
+docker compose -f compose.yaml -f compose.vpn.yaml up --detach
+docker exec melodic-wireguard wg show
+```
+
+La configuración de cada peer queda en `docker/wireguard/config/peer_personaA/peer_personaA.conf` (también hay un QR en `.png`). Con la VPN activa en el equipo del integrante:
+
+```bash
+mongosh "mongodb://melodic_readonly:PASSWORD@10.8.0.1:27017/melodic?authSource=admin&directConnection=true&tls=true&tlsCAFile=docker/mongo/tls/ca.pem"
+```
+
+El certificado de MongoDB incluye `10.8.0.1`; si se generó antes de la VPN, volver a correr `generate-certs.sh` y recrear los contenedores.
 
 ## MongoDB
 

@@ -1,0 +1,11 @@
+*filter
+:DOCKER-USER - [0:0]
+-A DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
+-A DOCKER-USER -i lo -j RETURN
+-A DOCKER-USER -i docker0 -j RETURN
+-A DOCKER-USER -i br+ -j RETURN
+-A DOCKER-USER -p tcp -m conntrack --ctorigdstport 80 -j RETURN
+-A DOCKER-USER -p tcp -m conntrack --ctorigdstport 443 -j RETURN
+-A DOCKER-USER -p udp -m conntrack --ctorigdstport 51820 -j RETURN
+-A DOCKER-USER -m conntrack --ctstate NEW -j DROP
+COMMIT
