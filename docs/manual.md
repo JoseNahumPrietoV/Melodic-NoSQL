@@ -65,9 +65,20 @@ El corte a MongoDB y su reversión están en `docs/mongodb/03-corte-y-reversion.
 
 | Servicio | Desde el host | Dentro de Docker |
 |---|---|---|
-| App | `localhost:8000` | `app:8000` |
+| App | `https://localhost` (Caddy; `http://` redirige) | `app:8000` |
 | MySQL | `localhost:3306` | `mysql:3306` |
 | MongoDB | Solo con `compose.localhost.yaml`: `127.0.0.1:27018` | `mongodb:27017` |
+
+## HTTPS
+
+Caddy sirve la app en `https://localhost` con TLS 1.2 y 1.3, HSTS y redirección desde `http://`. El certificado lo firma su CA interna; para que el navegador y `curl` confíen en él, exportar la CA:
+
+```bash
+docker cp melodic-proxy:/data/caddy/pki/authorities/local/root.crt caddy-root.crt
+curl -I --cacert caddy-root.crt https://localhost
+```
+
+Después importar `caddy-root.crt` en el navegador o en el sistema (en Arch: `sudo trust anchor caddy-root.crt`).
 
 ## MongoDB
 
