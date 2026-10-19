@@ -48,11 +48,17 @@ docker compose logs -f mongodb
 docker compose down
 ```
 
+Aplicar cambios de `compose.yaml`, del `Dockerfile` o de `.env` después de actualizar la rama (recrea los contenedores y quita los que ya no existen, sin borrar volúmenes):
+
+```bash
+docker compose up --build --detach --force-recreate --remove-orphans
+```
+
 | Servicio | Desde el host | Dentro de Docker |
 |---|---|---|
 | App | `localhost:8000` | `app:8000` |
 | MySQL | `localhost:3306` | `mysql:3306` |
-| MongoDB | `localhost:27018` | `mongodb:27017` |
+| MongoDB | Solo con `compose.localhost.yaml`: `127.0.0.1:27018` | `mongodb:27017` |
 
 ## MongoDB
 
@@ -68,7 +74,13 @@ Revisar el replica set:
 docker exec melodic-mongodb sh -c 'mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --eval "rs.status().ok"'
 ```
 
-Conectarse desde el host (en `.env`):
+MongoDB está en una red interna y no publica puertos. Para conectarse desde el host en desarrollo, levantar el stack con el archivo local, que lo publica solo en `127.0.0.1`:
+
+```bash
+docker compose -f compose.yaml -f compose.localhost.yaml up --detach
+```
+
+Y en `.env`:
 
 ```
 MONGODB_URI="mongodb://melodic_app:MONGO_APP_PASSWORD@127.0.0.1:27018/melodic?authSource=admin&directConnection=true"

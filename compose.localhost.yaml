@@ -1,0 +1,10 @@
+services:
+  mongodb:
+    networks:
+      - backend
+      - localhost
+    ports:
+      - "127.0.0.1:27018:27017"
+
+networks:
+  localhost:

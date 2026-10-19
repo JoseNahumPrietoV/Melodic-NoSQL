@@ -178,7 +178,7 @@ MongoDB corre como replica set de un nodo (`rs0`) y necesita un keyFile local, q
 docker compose up --build --detach
 ```
 
-Después abre [localhost:8000](http://localhost:8000). Los servicios locales quedan disponibles en los puertos `3306` (MySQL) y `27018` (MongoDB; se publica así para evitar conflictos con otras instancias locales). Para detenerlos sin borrar los datos persistidos:
+Después abre [localhost:8000](http://localhost:8000). MySQL queda disponible en el puerto `3306`. MongoDB está en una red interna y no publica puertos; para usarlo desde el host en desarrollo, levanta el stack con `docker compose -f compose.yaml -f compose.localhost.yaml up --detach`, que lo publica solo en `127.0.0.1:27018`. Para detenerlos sin borrar los datos persistidos:
 
 ```bash
 docker compose down
