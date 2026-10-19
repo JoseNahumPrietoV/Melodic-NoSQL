@@ -28,6 +28,8 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            'role' => 'user',
+            'is_suscribed' => false,
             'remember_token' => Str::random(10),
         ];
     }
@@ -39,6 +41,37 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    public function subscribed(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_suscribed' => true,
+            'fin_subscription' => now()->addMonth(),
+        ]);
+    }
+
+    public function artist(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'artist',
+            'is_suscribed' => true,
+        ]);
+    }
+
+    public function label(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'label',
+            'is_suscribed' => true,
+        ]);
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'admin',
         ]);
     }
 }

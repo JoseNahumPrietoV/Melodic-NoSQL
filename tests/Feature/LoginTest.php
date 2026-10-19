@@ -2,12 +2,46 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class LoginTest extends TestCase
 {
     use RefreshDatabase;
+
+    #[DataProvider('dashboardsByRole')]
+    public function test_login_redirects_each_role_to_its_dashboard(string $role, string $dashboard): void
+    {
+        $user = User::factory()->create(['role' => $role]);
+
+        $this->post(route('login.submit'), [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertRedirect(route($dashboard));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_listener_cannot_open_the_artist_dashboard(): void
+    {
+        $listener = User::factory()->subscribed()->create();
+
+        $this->actingAs($listener)
+            ->get(route('dashboard.artist'))
+            ->assertForbidden();
+    }
+
+    public static function dashboardsByRole(): array
+    {
+        return [
+            'user' => ['user', 'dashboard.user'],
+            'artist' => ['artist', 'dashboard.artist'],
+            'label' => ['label', 'dashboard.label'],
+            'admin' => ['admin', 'dashboard.admin'],
+        ];
+    }
 
     public function test_sixth_login_attempt_within_a_minute_is_throttled(): void
     {
