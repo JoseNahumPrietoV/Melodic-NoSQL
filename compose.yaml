@@ -9,9 +9,9 @@ services:
       - "8000:8000"
     environment:
       APP_NAME: Melodic
-      APP_ENV: local
-      APP_KEY: base64:V0pVZk9xS3h4c3R4Qm1Qb3d6R2h5TnNqQW1TQ3V4eGs=
-      APP_DEBUG: "true"
+      APP_ENV: ${APP_ENV:-production}
+      APP_KEY: ${APP_KEY:?APP_KEY is required}
+      APP_DEBUG: ${APP_DEBUG:-false}
       APP_URL: http://localhost:8000
       APP_LOCALE: es
       DB_CONNECTION: mysql
@@ -19,12 +19,12 @@ services:
       DB_PORT: 3306
       DB_DATABASE: melodic
       DB_USERNAME: melodic
-      DB_PASSWORD: melodic_dev
+      DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
       SESSION_DRIVER: database
       CACHE_STORE: database
       QUEUE_CONNECTION: database
       FILESYSTEM_DISK: local
-      MONGODB_URI: mongodb://root:root@mongodb:27017/melodic?authSource=admin&replicaSet=rs0
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}:${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}@mongodb:27017/melodic?authSource=admin&replicaSet=rs0
       MONGODB_DATABASE: melodic
     volumes:
       - app-storage:/var/www/html/storage
@@ -44,8 +44,8 @@ services:
     environment:
       MYSQL_DATABASE: melodic
       MYSQL_USER: melodic
-      MYSQL_PASSWORD: melodic_dev
-      MYSQL_ROOT_PASSWORD: root_dev
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -61,8 +61,8 @@ services:
     ports:
       - "27018:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
       MONGO_INITDB_DATABASE: melodic
     command:
       - bash
