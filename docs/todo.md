@@ -6,6 +6,7 @@
 - E1-T02 · Diseñar las colecciones y la forma de los documentos (Persona A)
 - E1-T03 · Definir identificadores, tipos, nulos e índices (Persona A)
 - E1-T04 · Levantar MongoDB como replica set y conectarlo a Laravel (Persona B)
+- E1-T05 · Crear las colecciones e índices con una migración nueva (Persona A)
 - E1-T06 · Escribir pruebas funcionales de los flujos críticos (Persona B)
 - E2-T15 · Restringir los roles permitidos en el registro público (Persona B)
 - E2-T16 · Limitar los intentos de login y registro (Persona B)
@@ -16,7 +17,6 @@
 
 ## Pendientes
 
-- E1-T05 · Crear las colecciones e índices con una migración nueva (Persona A)
 - E1-T07 · Construir el comando de carga inicial a MongoDB (Persona A)
 - E1-T08 · Construir el comando de verificación de equivalencia (Persona A)
 - E1-T09 · Migrar los modelos Eloquent a laravel-mongodb (Persona A)

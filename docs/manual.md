@@ -89,6 +89,21 @@ Y en `.env`:
 MONGODB_URI="mongodb://melodic_app:MONGO_APP_PASSWORD@127.0.0.1:27018/melodic?authSource=admin&directConnection=true&tls=true&tlsCAFile=docker/mongo/tls/ca.pem"
 ```
 
+## Colecciones e índices de MongoDB
+
+La migración de MongoDB vive en `database/migrations/mongodb/` para que `composer test` no la ejecute. Crear y revertir:
+
+```bash
+docker exec melodic-app php artisan migrate --path=database/migrations/mongodb --force
+docker exec melodic-app php artisan migrate:rollback --path=database/migrations/mongodb --force
+```
+
+Ver los índices de una colección:
+
+```bash
+docker exec melodic-mongodb sh -c 'mongosh --tls --tlsCAFile /run/secrets/mongodb_tls_ca --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin melodic --eval "db.songs.getIndexes()"'
+```
+
 ## Usuarios de MongoDB
 
 | Usuario | Permisos | Uso |

@@ -159,7 +159,7 @@ Se descarta guardar centavos: obligaría a cambiar cada vista y cada cálculo.
 | `royalties` | `{ recipient_id: 1 }` único | Saldo en cada reproducción, retiro y panel; garantiza un monedero por destinatario |
 | `earnings` | `{ at: 1 }` | Ingresos por mes y de los últimos 30 días (`AdminController@index`) |
 | `expenses` | `{ user_id: 1, at: -1 }` | Últimos 5 retiros (`DashboardController@artist`, `@label`) |
-| `subscriptions`, `albums`, `songs`, `playlists`, `royalties`, `earnings`, `expenses` | `{ legacy_id: 1 }` único | Upsert idempotente de la carga (E1-T07) y verificación (E1-T08) |
+| `subscriptions`, `albums`, `songs`, `playlists`, `royalties`, `earnings`, `expenses` | `{ legacy_id: 1 }` único y sparse | Upsert idempotente de la carga (E1-T07) y verificación (E1-T08). Es sparse porque los documentos que cree la app después del corte no tienen `legacy_id` |
 
 Consultas que recorren la colección completa, de forma aceptada:
 
