@@ -1,0 +1,36 @@
+services:
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:1.0.20250521
+    container_name: melodic-wireguard
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    environment:
+      PUID: ${VPN_PUID:-1000}
+      PGID: ${VPN_PGID:-1000}
+      PEERS: personaA,personaB
+      INTERNAL_SUBNET: 10.8.0.0
+      ALLOWEDIPS: 10.8.0.0/24
+      SERVERURL: ${VPN_SERVER_URL:?VPN_SERVER_URL is required}
+      SERVERPORT: 51820
+      PEERDNS: "off"
+    ports:
+      - "51820:51820/udp"
+    volumes:
+      - ./docker/wireguard/config:/config
+      - ./docker/wireguard/templates:/config/templates:ro
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    networks:
+      - backend
+      - vpn
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+networks:
+  vpn:
+    ipam:
+      config:
+        - subnet: 172.30.80.0/24

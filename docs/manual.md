@@ -92,6 +92,23 @@ sudo iptables -S DOCKER-USER
 
 Revertir: borrar el bloque `MELODIC DOCKER-USER` de `/etc/ufw/after.rules`, quitar las reglas con `sudo ufw delete allow 80/tcp` (y las demás) y ejecutar `sudo ufw reload`.
 
+## VPN (WireGuard)
+
+`compose.vpn.yaml` agrega un servidor WireGuard en `10.8.0.0/24` con un peer por integrante (`personaA`, `personaB`). Por la VPN solo se alcanzan MongoDB en `10.8.0.1:27017` y el SSH del host. Las claves se generan en `docker/wireguard/config/`, que no se versiona. Llenar `VPN_SERVER_URL` en `.env` con la IP o el dominio del host y levantar:
+
+```bash
+docker compose -f compose.yaml -f compose.vpn.yaml up --detach
+docker exec melodic-wireguard wg show
+```
+
+La configuración de cada peer queda en `docker/wireguard/config/peer_personaA/peer_personaA.conf` (también hay un QR en `.png`). Con la VPN activa en el equipo del integrante:
+
+```bash
+mongosh "mongodb://melodic_readonly:PASSWORD@10.8.0.1:27017/melodic?authSource=admin&directConnection=true&tls=true&tlsCAFile=docker/mongo/tls/ca.pem"
+```
+
+El certificado de MongoDB incluye `10.8.0.1`; si se generó antes de la VPN, volver a correr `generate-certs.sh` y recrear los contenedores.
+
 ## MongoDB
 
 Abrir una consola:

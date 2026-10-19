@@ -24,11 +24,11 @@
 - E3-T20 · Servir la app por HTTPS con un proxy inverso (Persona B)
 - E4-T21 · Aislar MongoDB en una red interna de Docker (Persona B)
 - E4-T22 · Configurar el firewall del host (Persona B)
+- E4-T23 · Dar acceso administrativo a MongoDB solo por VPN (Persona B)
 - E5-T25 · Documentar el catálogo de consultas CRUD en mongosh (Persona A)
 
 ## Pendientes
 
-- E4-T23 · Dar acceso administrativo a MongoDB solo por VPN (Persona B)
 - E4-T24 · Verificar los protocolos TLS y los puertos expuestos (Persona B)
 - E5-T26 · Validar con explain() que las consultas críticas usan índices (Persona B)
 - E6-T27 · Escribir el runbook de comandos (Persona B)
