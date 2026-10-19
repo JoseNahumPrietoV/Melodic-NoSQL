@@ -42,7 +42,8 @@ class DashboardController extends Controller
     {
         $artist = Auth::user();
 
-        $albums = $artist->albums()->withCount('songs')->get();
+        $albums = $artist->albums()->with('songs')->get()
+            ->each(fn ($album) => $album->setAttribute('songs_count', $album->songs->count()));
 
         $currentBalance = 0.00;
         $withdrawals = collect();
