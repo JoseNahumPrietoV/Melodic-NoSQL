@@ -169,7 +169,7 @@ http://localhost:8000
 
 El entorno local se puede levantar con Docker Compose. Este arranque crea los servicios de Laravel, MySQL y MongoDB; la aplicación usa MySQL como fuente relacional y deja MongoDB disponible para las siguientes etapas de la migración.
 
-Compose toma los secretos del `.env`: antes del primer arranque llena `APP_KEY`, `MONGO_ROOT_USERNAME`, `MONGO_ROOT_PASSWORD`, `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD` (sin estas variables no arranca). Genera las contraseñas con `openssl rand -hex 24`.
+Compose toma los secretos del `.env`: antes del primer arranque llena `APP_KEY`, `MONGO_ROOT_USERNAME`, `MONGO_ROOT_PASSWORD`, `MONGO_APP_PASSWORD`, `MONGO_READONLY_PASSWORD`, `MONGO_BACKUP_PASSWORD`, `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD` (sin estas variables no arranca). Genera las contraseñas con `openssl rand -hex 24`.
 
 MongoDB corre como replica set de un nodo (`rs0`) y necesita un keyFile local, que no se versiona. Genéralo una sola vez antes del primer arranque:
 

@@ -6,6 +6,7 @@
 - E1-T06 · Escribir pruebas funcionales de los flujos críticos (Persona B)
 - E2-T15 · Restringir los roles permitidos en el registro público (Persona B)
 - E2-T16 · Limitar los intentos de login y registro (Persona B)
+- E2-T17 · Crear usuarios de MongoDB con mínimo privilegio (Persona B)
 - E2-T18 · Sacar los secretos de compose.yaml y rotar el APP_KEY (Persona B)
 
 ## Pendientes
@@ -22,7 +23,6 @@
 - E1-T12 · Reescribir el dashboard de admin con agregaciones (Persona B)
 - E1-T13 · Migrar la búsqueda de explorar y de playlists (Persona B)
 - E1-T14 · Ejecutar el corte a MongoDB y ensayar la reversión (Persona A)
-- E2-T17 · Crear usuarios de MongoDB con mínimo privilegio (Persona B)
 - E3-T19 · Exigir TLS en las conexiones a MongoDB (Persona B)
 - E3-T20 · Servir la app por HTTPS con un proxy inverso (Persona B)
 - E4-T21 · Aislar MongoDB en una red interna de Docker (Persona B)
