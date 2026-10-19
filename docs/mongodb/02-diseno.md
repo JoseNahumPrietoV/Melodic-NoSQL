@@ -109,3 +109,60 @@ db.playlists.updateOne(
 ## Lo que se queda en la base relacional
 
 Sesiones, caché y colas siguen en la conexión relacional (SQLite local, MySQL en Docker) durante el sprint: `sessions`, `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs`, `password_reset_tokens` y `migrations`. Al cambiar `DB_CONNECTION` a MongoDB en E1-T14 se fijan con `SESSION_CONNECTION`, `DB_CACHE_CONNECTION` y `DB_QUEUE_CONNECTION`.
+
+## Tipos e índices
+
+### Identificadores
+
+- `users._id` conserva el UUID como string: lo genera la app y lo referencian `albums`, `playlists`, `royalties`, `expenses` y `users.label`.
+- Las demás colecciones usan `ObjectId` y guardan `legacy_id` (el int original) durante la transición, para resolver las FK en la carga y comparar contra la base relacional. Las FK int se convierten al `ObjectId` del documento con ese `legacy_id`.
+- Las vistas y rutas usan `song_id`, `album_id`, `playlist_id` y `user_id`. En E1-T09 cada modelo expone un accessor con ese nombre que devuelve su `_id` como string, para no tocar las vistas.
+
+### Dinero
+
+`Decimal128`, con el cast `decimal:2` de laravel-mongodb. Se probó contra MongoDB 8.0 y laravel-mongodb 5.8:
+
+- El modelo devuelve un string (`'10.30'`); `number_format` y la aritmética con `float` funcionan en Blade y en PHP.
+- `$inc` sobre un `Decimal128` conserva el tipo. Para evitar errores de redondeo, E1-T11 incrementa con `new Decimal128('0.15')` en lugar de un `float`.
+- `sum()` del query builder devuelve un objeto `Decimal128`. E1-T12 lo convierte con `(string)` antes de operar.
+
+Se descarta guardar centavos: obligaría a cambiar cada vista y cada cálculo.
+
+### Conversión de tipos
+
+| Origen (MySQL / SQLite) | MongoDB | Regla |
+|---|---|---|
+| PK int (`id`, `album_id`, `song_id`, ...) | `ObjectId` en `_id` y `Int32` en `legacy_id` | Se genera un `ObjectId` nuevo; el int se guarda aparte |
+| UUID (`user_id`, `label`, `recipient_id`) | String | Sin cambios |
+| FK int (`album_id`, `subscription_id`, `from`, `comision`, `subscription`) | `ObjectId` | Se busca el documento por `legacy_id` |
+| `decimal(10,2)` y `decimal(13,2)` | `Decimal128` | Desde el string de la base, sin pasar por `float` |
+| `timestamp` (`created_at`, `updated_at`, `at`, `last_payment`, `email_verified_at`) | `Date` UTC | La app usa `UTC`; se interpreta el valor como UTC |
+| `date` (`fin_subscription`) | `Date` a las 00:00 UTC | |
+| `boolean` (`is_suscribed`, 0/1) | `Boolean` | |
+| `unsignedBigInteger` (`plays`) | `Int64` | |
+| `tinyint` / `int` (`months`, `length`) | `Int32` | |
+| `string` / `text` | String | |
+| `NULL` | `null` explícito | Se guarda el campo con `null` en `label`, `subscription_id`, `fin_subscription` y los demás nulos, para conservar `whereNull` y `=== null` |
+
+### Índices
+
+| Colección | Índice | Consulta que lo justifica |
+|---|---|---|
+| `users` | `{ email: 1 }` único | Login (`LoginController@login`) y la regla `unique:users,email` del registro y de la creación de labels y artistas |
+| `users` | `{ label: 1 }` | Artistas de un label (`DashboardController@label`) |
+| `users` | `{ role: 1, created_at: -1 }` | Últimos 10 labels (`AdminController@index`) |
+| `albums` | `{ user_id: 1 }` | Álbumes del artista (`DashboardController@artist`) |
+| `songs` | `{ album_id: 1 }` | Canciones de un álbum (`AlbumController@show`) y conteo por álbum |
+| `songs` | `{ "artist.user_id": 1 }` | Reproducciones por artista y por label (`DashboardController@label`) |
+| `songs` | `{ created_at: -1 }` | Explorar sin búsqueda, por fecha (`DashboardController@explore`) |
+| `playlists` | `{ user_id: 1, created_at: -1 }` | Playlists del usuario por fecha (`PlaylistController@index`, `DashboardController@user`) |
+| `royalties` | `{ recipient_id: 1 }` único | Saldo en cada reproducción, retiro y panel; garantiza un monedero por destinatario |
+| `earnings` | `{ at: 1 }` | Ingresos por mes y de los últimos 30 días (`AdminController@index`) |
+| `expenses` | `{ user_id: 1, at: -1 }` | Últimos 5 retiros (`DashboardController@artist`, `@label`) |
+| `subscriptions`, `albums`, `songs`, `playlists`, `royalties`, `earnings`, `expenses` | `{ legacy_id: 1 }` único | Upsert idempotente de la carga (E1-T07) y verificación (E1-T08) |
+
+Consultas que recorren la colección completa, de forma aceptada:
+
+- Búsqueda por `name` y `artist.username` con regex (`@explore`, `PlaylistController@show`): un `LIKE '%q%'` tampoco usa índice en SQL. Atlas Search o un índice de texto quedan en el backlog (C05).
+- 6 canciones al azar (`DashboardController@user`): `$sample` no usa índices.
+- `SUM` total de `earnings` y `expenses` y la lista de planes: frecuencia baja y colecciones pequeñas.
