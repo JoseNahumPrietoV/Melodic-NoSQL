@@ -24,8 +24,7 @@ services:
       CACHE_STORE: database
       QUEUE_CONNECTION: database
       FILESYSTEM_DISK: local
-      # Conexión reservada para la futura migración a MongoDB.
-      MONGODB_URI: mongodb://root:root@mongodb:27017/melodic?authSource=admin
+      MONGODB_URI: mongodb://root:root@mongodb:27017/melodic?authSource=admin&replicaSet=rs0
       MONGODB_DATABASE: melodic
     volumes:
       - app-storage:/var/www/html/storage
@@ -65,13 +64,31 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: root
       MONGO_INITDB_DATABASE: melodic
+    command:
+      - bash
+      - -c
+      - >-
+        install -m 400 -o mongodb -g mongodb /run/secrets/mongodb_keyfile /data/configdb/keyfile
+        && exec docker-entrypoint.sh mongod --replSet rs0 --keyFile /data/configdb/keyfile --bind_ip_all
+    secrets:
+      - mongodb_keyfile
     volumes:
       - mongodb-data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1"]
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD"
+          --eval "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongodb:27017' }] }).ok }"
+          | grep -qx 1
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+secrets:
+  mongodb_keyfile:
+    file: ./docker/mongo/keyfile
 
 volumes:
   app-storage:
