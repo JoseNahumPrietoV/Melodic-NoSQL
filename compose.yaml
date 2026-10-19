@@ -24,7 +24,7 @@ services:
       CACHE_STORE: database
       QUEUE_CONNECTION: database
       FILESYSTEM_DISK: local
-      MONGODB_URI: mongodb://melodic_app:${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required}@mongodb:27017/melodic?authSource=admin&replicaSet=rs0
+      MONGODB_URI: mongodb://melodic_app:${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required}@mongodb:27017/melodic?authSource=admin&replicaSet=rs0&tls=true&tlsCAFile=/run/secrets/mongodb_tls_ca
       MONGODB_DATABASE: melodic
     volumes:
       - app-storage:/var/www/html/storage
@@ -32,6 +32,8 @@ services:
     networks:
       - default
       - backend
+    secrets:
+      - mongodb_tls_ca
     depends_on:
       mysql:
         condition: service_healthy
@@ -75,9 +77,15 @@ services:
       - -c
       - >-
         install -m 400 -o mongodb -g mongodb /run/secrets/mongodb_keyfile /data/configdb/keyfile
+        && install -m 400 -o mongodb -g mongodb /run/secrets/mongodb_tls_certificate /data/configdb/server.pem
         && exec docker-entrypoint.sh mongod --replSet rs0 --keyFile /data/configdb/keyfile --bind_ip_all
+        --tlsMode requireTLS --tlsCertificateKeyFile /data/configdb/server.pem
+        --tlsCAFile /run/secrets/mongodb_tls_ca --tlsAllowConnectionsWithoutCertificates
+        --tlsDisabledProtocols TLS1_0,TLS1_1
     secrets:
       - mongodb_keyfile
+      - mongodb_tls_ca
+      - mongodb_tls_certificate
     volumes:
       - mongodb-data:/data/db
       - ./docker/mongo/init:/docker-entrypoint-initdb.d:ro
@@ -85,7 +93,8 @@ services:
       test:
         - CMD-SHELL
         - >-
-          mongosh --quiet -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD"
+          mongosh --quiet --tls --tlsCAFile /run/secrets/mongodb_tls_ca
+          -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD"
           --eval "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongodb:27017' }] }).ok }"
           | grep -qx 1
       interval: 10s
@@ -100,6 +109,10 @@ networks:
 secrets:
   mongodb_keyfile:
     file: ./docker/mongo/keyfile
+  mongodb_tls_ca:
+    file: ./docker/mongo/tls/ca.pem
+  mongodb_tls_certificate:
+    file: ./docker/mongo/tls/server.pem
 
 volumes:
   app-storage:
