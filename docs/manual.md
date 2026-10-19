@@ -104,6 +104,17 @@ Ver los índices de una colección:
 docker exec melodic-mongodb sh -c 'mongosh --tls --tlsCAFile /run/secrets/mongodb_tls_ca --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin melodic --eval "db.songs.getIndexes()"'
 ```
 
+## Carga de datos a MongoDB
+
+Copia los datos de la base relacional a MongoDB. Se puede repetir: hace upsert por `legacy_id` y no duplica. Primero simular, después cargar:
+
+```bash
+docker exec melodic-app php artisan melodic:migrate-to-mongo --dry-run
+docker exec melodic-app php artisan melodic:migrate-to-mongo
+```
+
+Opciones: `--collection=songs` carga una sola colección (sus referencias ya deben estar cargadas) y `--from=sqlite` cambia la conexión de origen. El comando termina con código 1 si alguna fila tuvo errores.
+
 ## Usuarios de MongoDB
 
 | Usuario | Permisos | Uso |
