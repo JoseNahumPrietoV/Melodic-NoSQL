@@ -33,11 +33,14 @@ Llenar en `.env` las variables `MONGO_ROOT_USERNAME`, `MONGO_ROOT_PASSWORD`, `MO
 openssl rand -hex 24
 ```
 
-Generar el keyFile de MongoDB (solo la primera vez):
+Generar el keyFile y los certificados TLS de MongoDB (solo la primera vez):
 
 ```bash
 ./docker/mongo/generate-keyfile.sh
+./docker/mongo/tls/generate-certs.sh
 ```
+
+MongoDB solo acepta conexiones TLS. Para renovar los certificados, volver a correr `generate-certs.sh` y recrear los contenedores.
 
 Levantar, ver el estado, ver los logs y detener:
 
@@ -65,13 +68,13 @@ docker compose up --build --detach --force-recreate --remove-orphans
 Abrir una consola:
 
 ```bash
-docker exec -it melodic-mongodb sh -c 'mongosh -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD"'
+docker exec -it melodic-mongodb sh -c 'mongosh --tls --tlsCAFile /run/secrets/mongodb_tls_ca -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD"'
 ```
 
 Revisar el replica set:
 
 ```bash
-docker exec melodic-mongodb sh -c 'mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --eval "rs.status().ok"'
+docker exec melodic-mongodb sh -c 'mongosh --tls --tlsCAFile /run/secrets/mongodb_tls_ca --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --eval "rs.status().ok"'
 ```
 
 MongoDB está en una red interna y no publica puertos. Para conectarse desde el host en desarrollo, levantar el stack con el archivo local, que lo publica solo en `127.0.0.1`:
@@ -83,7 +86,7 @@ docker compose -f compose.yaml -f compose.localhost.yaml up --detach
 Y en `.env`:
 
 ```
-MONGODB_URI="mongodb://melodic_app:MONGO_APP_PASSWORD@127.0.0.1:27018/melodic?authSource=admin&directConnection=true"
+MONGODB_URI="mongodb://melodic_app:MONGO_APP_PASSWORD@127.0.0.1:27018/melodic?authSource=admin&directConnection=true&tls=true&tlsCAFile=docker/mongo/tls/ca.pem"
 ```
 
 ## Usuarios de MongoDB
@@ -97,13 +100,13 @@ MONGODB_URI="mongodb://melodic_app:MONGO_APP_PASSWORD@127.0.0.1:27018/melodic?au
 Se crean solos cuando el volumen está vacío. En un volumen que ya existe, o después de cambiar sus contraseñas en `.env` y recrear el contenedor, aplicarlos con:
 
 ```bash
-docker exec melodic-mongodb sh -c 'mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" /docker-entrypoint-initdb.d/01-users.js'
+docker exec melodic-mongodb sh -c 'mongosh --tls --tlsCAFile /run/secrets/mongodb_tls_ca --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" /docker-entrypoint-initdb.d/01-users.js'
 ```
 
 Entrar como `melodic_readonly`:
 
 ```bash
-docker exec -it melodic-mongodb sh -c 'mongosh -u melodic_readonly -p "$MONGO_READONLY_PASSWORD" --authenticationDatabase admin melodic'
+docker exec -it melodic-mongodb sh -c 'mongosh --tls --tlsCAFile /run/secrets/mongodb_tls_ca -u melodic_readonly -p "$MONGO_READONLY_PASSWORD" --authenticationDatabase admin melodic'
 ```
 
 ## Rotar contraseñas
@@ -111,7 +114,7 @@ docker exec -it melodic-mongodb sh -c 'mongosh -u melodic_readonly -p "$MONGO_RE
 Los volúmenes guardan la contraseña con la que se crearon. Para cambiarla sin borrar datos, con los contenedores corriendo y las contraseñas viejas todavía en `.env`:
 
 ```bash
-docker exec melodic-mongodb sh -c 'mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" admin --eval "db.changeUserPassword(\"$MONGO_INITDB_ROOT_USERNAME\", \"NUEVA\")"'
+docker exec melodic-mongodb sh -c 'mongosh --tls --tlsCAFile /run/secrets/mongodb_tls_ca --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" admin --eval "db.changeUserPassword(\"$MONGO_INITDB_ROOT_USERNAME\", \"NUEVA\")"'
 docker exec melodic-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "ALTER USER root@\"%\" IDENTIFIED BY \"NUEVA_ROOT\"; ALTER USER root@localhost IDENTIFIED BY \"NUEVA_ROOT\"; ALTER USER melodic@\"%\" IDENTIFIED BY \"NUEVA_APP\";"'
 ```
 

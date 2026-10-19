@@ -16,3 +16,4 @@ compose.yaml
 docker-compose.yml
 npm-debug.log
 docker/mongo/keyfile
+docker/mongo/tls

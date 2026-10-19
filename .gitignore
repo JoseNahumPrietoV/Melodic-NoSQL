@@ -27,3 +27,5 @@ Thumbs.db
 /storage/app/
 /storage/framework/
 /docker/mongo/keyfile
+/docker/mongo/tls/*
+!/docker/mongo/tls/generate-certs.sh
