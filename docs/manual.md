@@ -27,7 +27,7 @@ composer test
 
 ## Docker
 
-Llenar en `.env` las variables `MONGO_ROOT_USERNAME`, `MONGO_ROOT_PASSWORD`, `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD`. Generar cada contraseña con:
+Llenar en `.env` las variables `MONGO_ROOT_USERNAME`, `MONGO_ROOT_PASSWORD`, `MONGO_APP_PASSWORD`, `MONGO_READONLY_PASSWORD`, `MONGO_BACKUP_PASSWORD`, `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD`. Generar cada contraseña con:
 
 ```bash
 openssl rand -hex 24
@@ -71,7 +71,27 @@ docker exec melodic-mongodb sh -c 'mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNA
 Conectarse desde el host (en `.env`):
 
 ```
-MONGODB_URI="mongodb://MONGO_ROOT_USERNAME:MONGO_ROOT_PASSWORD@127.0.0.1:27018/?authSource=admin&directConnection=true"
+MONGODB_URI="mongodb://melodic_app:MONGO_APP_PASSWORD@127.0.0.1:27018/melodic?authSource=admin&directConnection=true"
+```
+
+## Usuarios de MongoDB
+
+| Usuario | Permisos | Uso |
+|---|---|---|
+| `melodic_app` | `readWrite` sobre `melodic` | La aplicación |
+| `melodic_readonly` | `read` sobre `melodic` | Consultas y reportes |
+| `melodic_backup` | `backup` | `mongodump` |
+
+Se crean solos cuando el volumen está vacío. En un volumen que ya existe, o después de cambiar sus contraseñas en `.env` y recrear el contenedor, aplicarlos con:
+
+```bash
+docker exec melodic-mongodb sh -c 'mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" /docker-entrypoint-initdb.d/01-users.js'
+```
+
+Entrar como `melodic_readonly`:
+
+```bash
+docker exec -it melodic-mongodb sh -c 'mongosh -u melodic_readonly -p "$MONGO_READONLY_PASSWORD" --authenticationDatabase admin melodic'
 ```
 
 ## Rotar contraseñas
