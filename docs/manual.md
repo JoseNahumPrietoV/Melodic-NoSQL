@@ -1,5 +1,7 @@
 # Manual de comandos
 
+Guía para instalar y levantar el entorno. Los comandos de operación (conexión, usuarios, índices, respaldo, firewall y VPN) están en `docs/mongodb/comandos.md`.
+
 ## Entorno local
 
 ```bash
