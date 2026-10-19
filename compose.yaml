@@ -98,7 +98,7 @@ services:
         && exec docker-entrypoint.sh mongod --replSet rs0 --keyFile /data/configdb/keyfile --bind_ip_all
         --tlsMode requireTLS --tlsCertificateKeyFile /data/configdb/server.pem
         --tlsCAFile /run/secrets/mongodb_tls_ca --tlsAllowConnectionsWithoutCertificates
-        --tlsDisabledProtocols TLS1_0,TLS1_1
+        --tlsDisabledProtocols TLS1_0,TLS1_1 --tlsCipherConfig ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20
     secrets:
       - mongodb_keyfile
       - mongodb_tls_ca
