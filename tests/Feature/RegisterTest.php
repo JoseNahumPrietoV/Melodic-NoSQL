@@ -38,6 +38,17 @@ class RegisterTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'nuevo@melodic.test']);
     }
 
+    public function test_sixth_registration_attempt_within_a_minute_is_throttled(): void
+    {
+        foreach (range(1, 5) as $attempt) {
+            $this->post(route('register'), $this->registrationData('admin'))
+                ->assertSessionHasErrors('account_type');
+        }
+
+        $this->post(route('register'), $this->registrationData('admin'))
+            ->assertTooManyRequests();
+    }
+
     public static function privilegedAccountTypes(): array
     {
         return [

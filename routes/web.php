@@ -20,10 +20,14 @@ Route::get('/register', function () {
     return view('auth.register');
 });
 
-Route::post('/register', [RegisterController::class, 'store'])->name('register');
+Route::post('/register', [RegisterController::class, 'store'])
+    ->middleware('throttle:5,1,register')
+    ->name('register');
 
 Route::get('/login', [LoginController::class, 'show'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+Route::post('/login', [LoginController::class, 'login'])
+    ->middleware('throttle:5,1,login')
+    ->name('login.submit');
 
 Route::middleware(['auth'])->group(function () {
 
