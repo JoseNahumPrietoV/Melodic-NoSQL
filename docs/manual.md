@@ -19,9 +19,10 @@ Levantar la app:
 composer run dev
 ```
 
-Correr las pruebas:
+Correr las pruebas. Usan MongoDB (base `melodic_testing` con el usuario `melodic_test`), así que antes hay que llenar `MONGO_TEST_PASSWORD` y `MONGODB_TEST_URI` en `.env`, levantar el stack con `compose.localhost.yaml` y crear el usuario con el comando de "Usuarios de MongoDB":
 
 ```bash
+docker compose -f compose.yaml -f compose.localhost.yaml up --detach
 composer test
 ```
 
@@ -128,6 +129,7 @@ docker exec melodic-app php artisan melodic:verify-mongo
 | `melodic_app` | `readWrite` sobre `melodic` | La aplicación |
 | `melodic_readonly` | `read` sobre `melodic` | Consultas y reportes |
 | `melodic_backup` | `backup` | `mongodump` |
+| `melodic_test` | `readWrite` sobre `melodic_testing` | `composer test`; solo se crea si `MONGO_TEST_PASSWORD` tiene valor |
 
 Se crean solos cuando el volumen está vacío. En un volumen que ya existe, o después de cambiar sus contraseñas en `.env` y recrear el contenedor, aplicarlos con:
 

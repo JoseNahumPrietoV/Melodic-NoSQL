@@ -6,12 +6,12 @@ use App\Models\Album;
 use App\Models\Royalty;
 use App\Models\Song;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class PlayTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     public function test_play_counts_the_song_and_pays_the_independent_artist(): void
     {
@@ -32,7 +32,7 @@ class PlayTest extends TestCase
         $this->play($song);
 
         $this->assertRoyaltyBalance($label->user_id, 0.15);
-        $this->assertDatabaseMissing('royalties', ['recipient_id' => $artist->user_id]);
+        $this->assertDatabaseMissing(Royalty::class, ['recipient_id' => $artist->user_id]);
     }
 
     public function test_consecutive_plays_accumulate_on_the_same_royalty(): void

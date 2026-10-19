@@ -6,12 +6,12 @@ use App\Models\Album;
 use App\Models\Playlist;
 use App\Models\Song;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class PlaylistTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     public function test_listener_creates_a_playlist(): void
     {
@@ -21,7 +21,7 @@ class PlaylistTest extends TestCase
             ->post(route('playlist.store'), ['name' => 'Para correr'])
             ->assertRedirect(route('dashboard.user'));
 
-        $this->assertDatabaseHas('playlists', ['name' => 'Para correr', 'user_id' => $listener->user_id]);
+        $this->assertDatabaseHas(Playlist::class, ['name' => 'Para correr', 'user_id' => $listener->user_id]);
     }
 
     public function test_adding_a_song_twice_keeps_a_single_entry(): void

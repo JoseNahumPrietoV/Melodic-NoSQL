@@ -8,6 +8,7 @@ use App\Models\Royalty;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class SongController extends Controller
 {
@@ -22,7 +23,7 @@ class SongController extends Controller
 
         $request->validate([
             'name'       => 'required|string|max:255',
-            'album_id'   => 'nullable|exists:albums,album_id',
+            'album_id'   => ['nullable', Rule::exists(Album::class, '_id')],
             'audio_file' => 'required|file|mimes:mp3,wav,ogg,mpga,aac,m4a|max:20480',
             'cover_file' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);

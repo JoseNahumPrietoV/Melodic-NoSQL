@@ -5,13 +5,13 @@ namespace Tests\Feature;
 use App\Models\Earning;
 use App\Models\Expense;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class AdminDashboardTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     public function test_non_admin_users_cannot_open_the_admin_dashboard(): void
     {

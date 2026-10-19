@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class LabelController extends Controller
 {
@@ -24,7 +25,7 @@ class LabelController extends Controller
     {
         $request->validate([
             'username' => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
+            'email'    => ['required', 'email', Rule::unique(User::class, 'email')],
             'password' => 'required|min:6',
         ]);
 

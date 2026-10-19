@@ -5,12 +5,12 @@ namespace Tests\Feature;
 use App\Models\Album;
 use App\Models\Song;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class ExploreTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     public function test_explore_without_a_query_lists_every_song(): void
     {

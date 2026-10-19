@@ -2,14 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Earning;
 use App\Models\Subscription;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class SubscriptionTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     protected function setUp(): void
     {
@@ -36,7 +37,7 @@ class SubscriptionTest extends TestCase
             ->post(route('subscription.store'), ['plan_id' => $plan->id])
             ->assertRedirect(route('dashboard.user'));
 
-        $this->assertDatabaseHas('earnings', [
+        $this->assertDatabaseHas(Earning::class, [
             'amount' => 149.00,
             'subscription' => $plan->id,
             'comision' => null,

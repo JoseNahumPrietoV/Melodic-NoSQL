@@ -117,8 +117,7 @@ class MigrateToMongo extends Command
             'songs' => $this->source->table('songs')
                 ->join('albums', 'albums.album_id', '=', 'songs.album_id')
                 ->join('users', 'users.user_id', '=', 'albums.user_id')
-                ->select('songs.*', 'albums.title as album_title', 'albums.path as album_path',
-                    'albums.user_id as artist_id', 'users.username as artist_username')
+                ->select('songs.*', 'albums.user_id as artist_id', 'users.username as artist_username')
                 ->orderBy('songs.song_id'),
             'users' => $this->source->table('users')->orderBy('user_id'),
             default => $this->source->table($collection)->orderBy($this->sourceKey($collection)),
@@ -161,7 +160,6 @@ class MigrateToMongo extends Command
                 'file_path' => $row->file_path,
                 'image_path' => $row->image_path,
                 'album_id' => $this->reference('albums', $row->album_id),
-                'album' => ['title' => $row->album_title, 'path' => $row->album_path],
                 'artist' => ['user_id' => $row->artist_id, 'username' => $row->artist_username],
             ],
             'playlists' => [
@@ -256,7 +254,7 @@ class MigrateToMongo extends Command
         return $this->ids[$collection][$legacyId] ??= new ObjectId;
     }
 
-    private function reference(string $collection, int|string|null $legacyId): ?ObjectId
+    private function reference(string $collection, int|string|null $legacyId): ?string
     {
         if ($legacyId === null) {
             return null;
@@ -264,8 +262,10 @@ class MigrateToMongo extends Command
 
         $this->ids[$collection] ??= $this->existingIds($collection);
 
-        return $this->ids[$collection][(int) $legacyId]
+        $id = $this->ids[$collection][(int) $legacyId]
             ?? throw new RuntimeException("no existe {$collection} con legacy_id {$legacyId}");
+
+        return (string) $id;
     }
 
     private function existingIds(string $collection): array

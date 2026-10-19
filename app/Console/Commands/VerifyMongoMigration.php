@@ -163,7 +163,12 @@ class VerifyMongoMigration extends Command
             $orphans = $this->target->selectCollection($collection)->aggregate([
                 ...$pipeline,
                 ['$match' => [$field => ['$ne' => null]]],
-                ['$lookup' => ['from' => $target, 'localField' => $field, 'foreignField' => '_id', 'as' => 'match']],
+                ['$lookup' => [
+                    'from' => $target,
+                    'let' => ['reference' => '$'.$field],
+                    'pipeline' => [['$match' => ['$expr' => ['$eq' => [['$toString' => '$_id'], '$$reference']]]]],
+                    'as' => 'match',
+                ]],
                 ['$match' => ['match' => ['$size' => 0]]],
                 ['$count' => 'total'],
             ])->toArray();

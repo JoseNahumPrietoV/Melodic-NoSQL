@@ -2,13 +2,14 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Models\User;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class RegisterTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     public function test_listener_registration_creates_a_user_account(): void
     {
@@ -16,7 +17,7 @@ class RegisterTest extends TestCase
 
         $response->assertRedirect(route('dashboard.user'));
         $this->assertAuthenticated();
-        $this->assertDatabaseHas('users', ['email' => 'nuevo@melodic.test', 'role' => 'user']);
+        $this->assertDatabaseHas(User::class, ['email' => 'nuevo@melodic.test', 'role' => 'user']);
     }
 
     public function test_artist_registration_creates_an_artist_account(): void
@@ -25,7 +26,7 @@ class RegisterTest extends TestCase
 
         $response->assertRedirect(route('dashboard.artist'));
         $this->assertAuthenticated();
-        $this->assertDatabaseHas('users', ['email' => 'nuevo@melodic.test', 'role' => 'artist']);
+        $this->assertDatabaseHas(User::class, ['email' => 'nuevo@melodic.test', 'role' => 'artist']);
     }
 
     #[DataProvider('privilegedAccountTypes')]
@@ -35,7 +36,7 @@ class RegisterTest extends TestCase
 
         $response->assertSessionHasErrors('account_type');
         $this->assertGuest();
-        $this->assertDatabaseMissing('users', ['email' => 'nuevo@melodic.test']);
+        $this->assertDatabaseMissing(User::class, ['email' => 'nuevo@melodic.test']);
     }
 
     public function test_sixth_registration_attempt_within_a_minute_is_throttled(): void
