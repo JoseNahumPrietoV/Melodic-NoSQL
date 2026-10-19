@@ -56,9 +56,24 @@ class WithdrawTest extends TestCase
             ->post(route('label.withdraw'))
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas(Expense::class, ['amount' => 14.00, 'user_id' => $label->user_id]);
-        $this->assertDatabaseHas(Earning::class, ['amount' => 6.00]);
+        $this->assertDatabaseHas(Expense::class, [
+            'amount' => 14.00,
+            'user_id' => $label->user_id,
+            'from' => $royalty->royalties_id,
+        ]);
+        $this->assertDatabaseHas(Earning::class, ['amount' => 6.00, 'comision' => $royalty->royalties_id]);
         $this->assertBalanceIsEmpty($royalty);
+    }
+
+    public function test_withdrawal_split_adds_up_to_the_exact_balance(): void
+    {
+        $artist = User::factory()->artist()->create();
+        Royalty::factory()->create(['recipient_id' => $artist->user_id, 'amount' => '45.45']);
+
+        $this->actingAs($artist)->post(route('wallet.withdraw'));
+
+        $this->assertSame('31.82', Expense::firstOrFail()->amount);
+        $this->assertSame('13.63', Earning::firstOrFail()->amount);
     }
 
     private function assertBalanceIsEmpty(Royalty $royalty): void

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Earning;
 use App\Models\Expense;
 use App\Models\Royalty;
 use App\Models\User;
@@ -10,7 +9,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Song;
 use App\Models\Playlist;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 
 class DashboardController extends Controller
@@ -134,44 +132,4 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Logica de retiro para artistas independientes
-     *
-     * @return \Illuminate\Http\RedirectResponse
-     * @throws \Throwable
-     */
-    public function withdraw()
-    {
-        $user = Auth::user();
-
-        $royalty = Royalty::where('recipient_id', $user->user_id)->first();
-
-        if (!$royalty || $royalty->amount <= 0) {
-            return back()->with('error', 'No tienes fondos disponibles para retirar.');
-        }
-
-        DB::transaction(function () use ($royalty, $user) {
-            $totalAmount = $royalty->amount;
-            $platformShare = $totalAmount * 0.30;
-            $userPayout = $totalAmount * 0.70;
-
-            Expense::create([
-                'amount' => $userPayout,
-                'state'  => 'pagado',
-                'at'     => now(),
-            ]);
-
-            Earning::create([
-                'amount' => $platformShare,
-                'state'  => 'pagado',
-                'at'     => now(),
-            ]);
-
-            $royalty->amount = 0;
-            $royalty->last_payment = now();
-            $royalty->save();
-        });
-
-        return back()->with('success', '¡Retiro exitoso! Los fondos se han transferido.');
-    }
 }

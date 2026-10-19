@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Song;
 use App\Models\Album;
-use App\Models\Royalty;
+use App\Services\WalletService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
@@ -59,26 +58,10 @@ class SongController extends Controller
             ->with('success', '¡Canción subida con éxito!');
     }
 
-    /**
-     * Registra una reproducción y genera la regalía ($).
-     */
-    public function registerPlay(Request $request, Song $song)
+
+    public function registerPlay(Song $song, WalletService $wallet)
     {
-        DB::transaction(function () use ($song) {
-            $song->increment('plays');
-            $paymentPerPlay = 0.15;
-
-            $artist = $song->album->artist;
-            $recipientId = $artist->label ? $artist->label : $artist->user_id;
-
-            $royalty = Royalty::firstOrCreate(
-                ['recipient_id' => $recipientId],
-                ['amount' => 0]
-            );
-
-            $royalty->amount += $paymentPerPlay;
-            $royalty->save();
-        });
+        $wallet->registerPlay($song);
 
         return response()->json(['success' => true]);
     }
