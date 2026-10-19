@@ -10,7 +10,8 @@ RUN composer install \
     --no-progress \
     --prefer-dist \
     --optimize-autoloader \
-    --no-dev
+    --no-dev \
+    --ignore-platform-req=ext-mongodb
 
 # Compilación de los recursos frontend
 FROM node:24-bookworm-slim AS assets
@@ -33,8 +34,10 @@ WORKDIR /var/www/html
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libsqlite3-dev \
+        libssl-dev \
         libzip-dev \
         libonig-dev \
+        pkg-config \
         unzip \
     && docker-php-ext-install \
         bcmath \
@@ -42,7 +45,9 @@ RUN apt-get update \
         pdo_sqlite \
         pdo_mysql \
         zip \
-    && rm -rf /var/lib/apt/lists/*
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb \
+    && rm -rf /var/lib/apt/lists/* /tmp/pear
 
 COPY --from=vendor /var/www/html/vendor ./vendor
 COPY --from=assets /var/www/html/public/build ./public/build
