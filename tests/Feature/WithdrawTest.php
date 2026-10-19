@@ -6,12 +6,12 @@ use App\Models\Earning;
 use App\Models\Expense;
 use App\Models\Royalty;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class WithdrawTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     public function test_artist_withdrawal_pays_seventy_percent_and_keeps_thirty_as_commission(): void
     {
@@ -22,12 +22,12 @@ class WithdrawTest extends TestCase
             ->post(route('wallet.withdraw'))
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('expenses', [
+        $this->assertDatabaseHas(Expense::class, [
             'amount' => 7.00,
             'user_id' => $artist->user_id,
             'from' => $royalty->royalties_id,
         ]);
-        $this->assertDatabaseHas('earnings', [
+        $this->assertDatabaseHas(Earning::class, [
             'amount' => 3.00,
             'comision' => $royalty->royalties_id,
         ]);
@@ -56,9 +56,24 @@ class WithdrawTest extends TestCase
             ->post(route('label.withdraw'))
             ->assertSessionHas('success');
 
-        $this->assertDatabaseHas('expenses', ['amount' => 14.00, 'user_id' => $label->user_id]);
-        $this->assertDatabaseHas('earnings', ['amount' => 6.00]);
+        $this->assertDatabaseHas(Expense::class, [
+            'amount' => 14.00,
+            'user_id' => $label->user_id,
+            'from' => $royalty->royalties_id,
+        ]);
+        $this->assertDatabaseHas(Earning::class, ['amount' => 6.00, 'comision' => $royalty->royalties_id]);
         $this->assertBalanceIsEmpty($royalty);
+    }
+
+    public function test_withdrawal_split_adds_up_to_the_exact_balance(): void
+    {
+        $artist = User::factory()->artist()->create();
+        Royalty::factory()->create(['recipient_id' => $artist->user_id, 'amount' => '45.45']);
+
+        $this->actingAs($artist)->post(route('wallet.withdraw'));
+
+        $this->assertSame('31.82', Expense::firstOrFail()->amount);
+        $this->assertSame('13.63', Earning::firstOrFail()->amount);
     }
 
     private function assertBalanceIsEmpty(Royalty $royalty): void

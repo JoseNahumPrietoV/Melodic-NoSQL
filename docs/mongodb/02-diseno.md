@@ -9,7 +9,7 @@ Parte de la sección 1.5 de `docs/scrum.md` y del inventario en `01-inventario.m
 | `users` | `users` | Cuentas de los cuatro roles |
 | `subscriptions` | `subscriptions` | Catálogo de planes |
 | `albums` | `albums` | Álbumes de cada artista |
-| `songs` | `songs` | Canciones con un snapshot de su álbum y su artista |
+| `songs` | `songs` | Canciones con un snapshot de su artista |
 | `playlists` | `playlists` + `playlist_song` | Playlists con sus canciones embebidas |
 | `royalties` | `royalties` | Un monedero por destinatario |
 | `earnings` | `earnings` | Ingresos de la plataforma, solo inserción |
@@ -40,15 +40,14 @@ Parte de la sección 1.5 de `docs/scrum.md` y del inventario en `01-inventario.m
 // songs
 { _id: ObjectId("6710a0000000000000000201"), legacy_id: 42, name: "Luna nueva", length: 0,
   plays: NumberLong(1280), file_path: "songs/audio/luna.mp3", image_path: null,
-  album_id: ObjectId("6710a0000000000000000101"),
-  album: { title: "Noches de octubre", path: "album_covers/noches.jpg" },
+  album_id: "6710a0000000000000000101",
   artist: { user_id: "9b1c7e2a-4f0d-4c1e-9a55-2f6d3c8b1a01", username: "Carla Ríos" },
   created_at: ISODate("2026-10-13T18:20:00Z"), updated_at: ISODate("2026-10-18T09:11:00Z") }
 
 // playlists
 { _id: ObjectId("6710a0000000000000000301"), legacy_id: 3, name: "Para correr", description: null,
   path: null, user_id: "1f4e8d22-0a6b-4c3f-b7e9-5d2a1c0e9b33",
-  songs: [ { song_id: ObjectId("6710a0000000000000000201"), added_at: null } ],
+  songs: [ { song_id: "6710a0000000000000000201", added_at: null } ],
   created_at: ISODate("2026-10-14T20:00:00Z"), updated_at: ISODate("2026-10-14T20:00:00Z") }
 
 // royalties
@@ -60,13 +59,13 @@ Parte de la sección 1.5 de `docs/scrum.md` y del inventario en `01-inventario.m
 // earnings
 { _id: ObjectId("6710a0000000000000000501"), legacy_id: 15, amount: NumberDecimal("57.60"),
   state: "pagado", at: ISODate("2026-10-16T12:00:00Z"),
-  subscription: null, comision: ObjectId("6710a0000000000000000401"),
+  subscription: null, comision: "6710a0000000000000000401",
   created_at: ISODate("2026-10-16T12:00:00Z"), updated_at: ISODate("2026-10-16T12:00:00Z") }
 
 // expenses
 { _id: ObjectId("6710a0000000000000000601"), legacy_id: 9, amount: NumberDecimal("134.40"),
   state: "pagado", at: ISODate("2026-10-16T12:00:00Z"),
-  from: ObjectId("6710a0000000000000000401"), user_id: "5e0a9c11-7b3d-4b8e-8f21-0c4d6a9e7f10",
+  from: "6710a0000000000000000401", user_id: "5e0a9c11-7b3d-4b8e-8f21-0c4d6a9e7f10",
   created_at: ISODate("2026-10-16T12:00:00Z"), updated_at: ISODate("2026-10-16T12:00:00Z") }
 ```
 
@@ -75,21 +74,19 @@ Parte de la sección 1.5 de `docs/scrum.md` y del inventario en `01-inventario.m
 | Relación | Decisión | Justificación |
 |---|---|---|
 | `playlist_song` → `playlists.songs[]` | Embebido (referencias) | Mostrar una playlist, contar sus canciones y añadir una (`PlaylistController@show`, `@index`, `@addSong`, `DashboardController@user`) se resuelve en un documento. Añadir sin duplicar es un `updateOne` atómico. El arreglo guarda solo `song_id`, no la canción completa |
-| `album` y `artist` → `songs` | Snapshot embebido | Explorar y buscar en playlist (`DashboardController@explore`, `PlaylistController@show`) filtran por `name` o por `artist.username` en una sola colección, sin `$lookup`. Reproducir (`SongController@registerPlay`) obtiene el destinatario sin leer el álbum |
-| `songs.album_id` → `albums` | Referencia | Se conserva junto al snapshot para `AlbumController@show` y para contar canciones por álbum en `DashboardController@artist` |
+| `artist` → `songs` | Snapshot embebido | Explorar y buscar en playlist (`DashboardController@explore`, `PlaylistController@show`) filtran por `name` o por `artist.username` en una sola colección, sin `$lookup`. Reproducir (`SongController@registerPlay`) obtiene el destinatario sin leer el álbum |
+| `songs.album_id` → `albums` | Referencia | `AlbumController@show`, el conteo por álbum de `DashboardController@artist` y las vistas, que leen `$song->album->path` y `$song->album->artist` por la relación. El álbum no se copia en la canción: un campo `album` taparía la relación `album()` del modelo (E1-T09) y ninguna consulta filtra por él |
 | `albums.user_id` → `users` | Referencia | Un artista tiene pocos álbumes y `DashboardController@artist` los consulta solos |
 | `users.label` → `users` | Referencia | `DashboardController@label` busca artistas por `label`; embeber artistas en el label duplicaría usuarios |
 | `users.subscription_id` → `subscriptions` | Referencia | Catálogo pequeño que cambia aparte de los usuarios (`SubscriptionController`) |
 | `royalties.recipient_id` → `users` | Referencia, colección propia | Cada reproducción hace `$inc` sobre el saldo. Embebido en `users` reescribiría el usuario y competiría con login y suscripción |
 | `earnings.subscription`, `earnings.comision`, `expenses.from`, `expenses.user_id` | Referencia | Libros contables de solo inserción. Se agregan por fecha y por usuario (`AdminController`, `DashboardController@artist`) |
 
-## Snapshot de álbum y artista en `songs`
+## Snapshot del artista en `songs`
 
-- Campos: `album: { title, path }` y `artist: { user_id, username }`.
-- Se escriben al crear la canción (`SongController@store`) y en la carga inicial.
-- Hoy no hay flujos que editen `albums.title`, `albums.path` ni `users.username`. Si se agregan, deben actualizar el snapshot en la misma operación:
-  - Álbum: `db.songs.updateMany({ album_id }, { $set: { "album.title": ..., "album.path": ... } })`.
-  - Artista: `db.songs.updateMany({ "artist.user_id": id }, { $set: { "artist.username": ... } })`.
+- Campo: `artist: { user_id, username }`.
+- Lo escribe el modelo `Song` cada vez que cambia `album_id` (al crear la canción en `SongController@store`, en las factories y en la carga inicial).
+- Hoy no hay flujos que editen `users.username` ni que muevan un álbum de artista. Si se agregan, deben actualizar el snapshot en la misma operación: `db.songs.updateMany({ "artist.user_id": id }, { $set: { "artist.username": ... } })`.
 - `artist.user_id` es siempre el artista dueño del álbum. El label se resuelve desde `users.label` al pagar la regalía, porque un artista puede cambiar de label.
 
 ## Límite de canciones por playlist
@@ -115,7 +112,8 @@ Sesiones, caché y colas siguen en la conexión relacional (SQLite local, MySQL 
 ### Identificadores
 
 - `users._id` conserva el UUID como string: lo genera la app y lo referencian `albums`, `playlists`, `royalties`, `expenses` y `users.label`.
-- Las demás colecciones usan `ObjectId` y guardan `legacy_id` (el int original) durante la transición, para resolver las FK en la carga y comparar contra la base relacional. Las FK int se convierten al `ObjectId` del documento con ese `legacy_id`.
+- Las demás colecciones usan `ObjectId` y guardan `legacy_id` (el int original) durante la transición, para resolver las FK en la carga y comparar contra la base relacional.
+- Las referencias a otros documentos se guardan como el string hexadecimal de su `ObjectId`, no como `ObjectId`. Es la convención de laravel-mongodb: `associate()` guarda `getKey()` como string y `hasMany` filtra con ese string, así que una FK de tipo `ObjectId` no coincide (probado en E1-T09). Las referencias a usuarios ya son strings (UUID). En `$lookup` se compara con `{ $toString: "$_id" }`.
 - Las vistas y rutas usan `song_id`, `album_id`, `playlist_id` y `user_id`. En E1-T09 cada modelo expone un accessor con ese nombre que devuelve su `_id` como string, para no tocar las vistas.
 
 ### Dinero
@@ -134,7 +132,7 @@ Se descarta guardar centavos: obligaría a cambiar cada vista y cada cálculo.
 |---|---|---|
 | PK int (`id`, `album_id`, `song_id`, ...) | `ObjectId` en `_id` y `Int32` en `legacy_id` | Se genera un `ObjectId` nuevo; el int se guarda aparte |
 | UUID (`user_id`, `label`, `recipient_id`) | String | Sin cambios |
-| FK int (`album_id`, `subscription_id`, `from`, `comision`, `subscription`) | `ObjectId` | Se busca el documento por `legacy_id` |
+| FK int (`album_id`, `subscription_id`, `from`, `comision`, `subscription`, `songs[].song_id`) | String con el hexadecimal del `ObjectId` | Se busca el documento por `legacy_id` |
 | `decimal(10,2)` y `decimal(13,2)` | `Decimal128` | Desde el string de la base, sin pasar por `float` |
 | `timestamp` (`created_at`, `updated_at`, `at`, `last_payment`, `email_verified_at`) | `Date` UTC | La app usa `UTC`; se interpreta el valor como UTC |
 | `date` (`fin_subscription`) | `Date` a las 00:00 UTC | |

@@ -3,13 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class LoginTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     #[DataProvider('dashboardsByRole')]
     public function test_login_redirects_each_role_to_its_dashboard(string $role, string $dashboard): void

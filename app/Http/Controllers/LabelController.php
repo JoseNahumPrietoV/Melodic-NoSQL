@@ -2,15 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Earning;
-use App\Models\Expense;
-use App\Models\Royalty;
+use App\Services\WalletService;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class LabelController extends Controller
 {
@@ -24,7 +22,7 @@ class LabelController extends Controller
     {
         $request->validate([
             'username' => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
+            'email'    => ['required', 'email', Rule::unique(User::class, 'email')],
             'password' => 'required|min:6',
         ]);
 
@@ -42,44 +40,12 @@ class LabelController extends Controller
         return back()->with('success', '¡Perfil de artista creado exitosamente!');
     }
 
-    /**
-     * Logica de retiro para labels
-     *
-     * @return RedirectResponse
-     * @throws \Throwable
-     */
-    public function withdraw()
+
+    public function withdraw(WalletService $wallet)
     {
-        $user = Auth::user();
-
-        $royalty = Royalty::where('recipient_id', $user->user_id)->first();
-
-        if (!$royalty || $royalty->amount <= 0) {
+        if (! $wallet->withdraw(Auth::user())) {
             return back()->with('error', 'No tienes fondos disponibles para retirar.');
         }
-
-        DB::transaction(function () use ($royalty, $user) {
-            $totalAmount = $royalty->amount;
-            $platformShare = $totalAmount * 0.30;
-            $userPayout = $totalAmount * 0.70;
-
-            Expense::create([
-                'amount'  => $userPayout,
-                'state'   => 'pagado',
-                'at'      => now(),
-                'user_id' => $user->user_id,
-            ]);
-
-            Earning::create([
-                'amount' => $platformShare,
-                'state'  => 'pagado',
-                'at'     => now(),
-            ]);
-
-            $royalty->amount = 0;
-            $royalty->last_payment = now();
-            $royalty->save();
-        });
 
         return back()->with('success', '¡Retiro procesado! Se ha transferido el 70% de tus regalías.');
     }

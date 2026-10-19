@@ -5,12 +5,12 @@ namespace Tests\Feature;
 use App\Models\Album;
 use App\Models\Song;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class ExploreTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     public function test_explore_without_a_query_lists_every_song(): void
     {
@@ -38,6 +38,29 @@ class ExploreTest extends TestCase
 
         $this->explore('carla')
             ->assertViewHas('songs', fn ($songs) => $songs->pluck('song_id')->all() === [$match->song_id]);
+    }
+
+    public function test_explore_treats_regex_characters_as_plain_text(): void
+    {
+        $match = Song::factory()->create(['name' => 'Tema (en vivo)']);
+        Song::factory()->create(['name' => 'Tema en vivo']);
+
+        $this->explore('(en vivo')
+            ->assertOk()
+            ->assertViewHas('songs', fn ($songs) => $songs->pluck('song_id')->all() === [$match->song_id]);
+
+        $this->explore('.*')
+            ->assertViewHas('songs', fn ($songs) => $songs->isEmpty());
+    }
+
+    public function test_listener_dashboard_shows_six_random_songs(): void
+    {
+        Song::factory()->count(8)->create();
+
+        $this->actingAs(User::factory()->subscribed()->create())
+            ->get(route('dashboard.user'))
+            ->assertOk()
+            ->assertViewHas('songs', fn ($songs) => $songs->count() === 6 && $songs->every(fn (Song $song) => $song->album->artist !== null));
     }
 
     private function explore(?string $query = null)

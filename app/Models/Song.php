@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use MongoDB\BSON\Regex;
+use MongoDB\Laravel\Eloquent\Model;
 
 class Song extends Model
 {
     use HasFactory;
+
+    protected $connection = 'mongodb';
 
     protected $fillable = [
         'name',
@@ -19,25 +23,52 @@ class Song extends Model
         'plays',
     ];
 
-    protected $primaryKey = 'song_id';
+    protected $attributes = [
+        'length' => 0,
+        'plays' => 0,
+        'image_path' => null,
+    ];
 
-    /**
-     * Relación: Una canción pertenece a un álbum
-     *
-     * @return BelongsTo
-     */
-    public function album(): BelongsTo
+    protected $casts = [
+        'length' => 'integer',
+        'plays' => 'integer',
+    ];
+
+    protected static function booted(): void
     {
-        return $this->belongsTo(Album::class, 'album_id', 'album_id');
+        static::saving(function (Song $song) {
+            if ($song->isDirty('album_id')) {
+                $song->snapshotArtist();
+            }
+        });
+    }
+
+    protected function songId(): Attribute
+    {
+        return Attribute::get(fn () => $this->getKey());
     }
 
     /**
-     * Relación: Una canción puede estar en muchas playlists
-     *
-     * @return BelongsToMany
+     * Relación: Una canción pertenece a un álbum
      */
-    public function playlists(): BelongsToMany
+    public function album(): BelongsTo
     {
-        return $this->belongsToMany(Playlist::class, 'playlist_song', 'song_id', 'playlist_id');
+        return $this->belongsTo(Album::class, 'album_id');
+    }
+
+    public function scopeMatching(Builder $query, string $term): void
+    {
+        $pattern = new Regex(preg_quote($term), 'i');
+
+        $query->where(fn (Builder $songs) => $songs
+            ->where('name', 'regex', $pattern)
+            ->orWhere('artist.username', 'regex', $pattern));
+    }
+
+    private function snapshotArtist(): void
+    {
+        $artist = Album::findOrFail($this->album_id)->artist;
+
+        $this->artist = ['user_id' => $artist->user_id, 'username' => $artist->username];
     }
 }

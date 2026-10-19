@@ -8,6 +8,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Validation\Rule;
 
 class SubscriptionController extends Controller
 {
@@ -29,7 +30,7 @@ class SubscriptionController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'plan_id' => 'required|exists:subscriptions,id',
+            'plan_id' => ['required', Rule::exists(Subscription::class, '_id')],
         ]);
 
         $user = Auth::user();

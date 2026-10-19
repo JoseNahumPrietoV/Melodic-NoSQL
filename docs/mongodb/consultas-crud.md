@@ -1,6 +1,6 @@
 # Catálogo de consultas CRUD en mongosh
 
-Consultas sobre el diseño de `02-diseno.md`, cada una con su equivalente SQL actual. Se ejecutan en orden sobre los datos que carga `melodic:migrate-to-mongo` (ver `docs/manual.md`).
+Consultas sobre el diseño de `02-diseno.md`, cada una con su equivalente SQL actual. Las referencias entre documentos son el string del `ObjectId`, por eso se usa `.toString()` al escribirlas y `ObjectId(...)` al buscar por `_id`. Se ejecutan en orden sobre los datos que carga `melodic:migrate-to-mongo` (ver `docs/manual.md`).
 
 ## Variables de ejemplo
 
@@ -11,7 +11,7 @@ const artist = db.users.findOne({ role: "artist", label: null, _id: { $in: db.al
 const label = db.users.findOne({ role: "label" });
 const listener = db.users.findOne({ role: "user", subscription_id: { $ne: null } });
 const album = db.albums.findOne({ user_id: artist._id });
-const song = db.songs.findOne({ album_id: album._id });
+const song = db.songs.findOne({ album_id: album._id.toString() });
 const playlist = db.playlists.findOne({ user_id: listener._id });
 ```
 
@@ -40,7 +40,7 @@ db.users.find({ label: label._id });
 // Leer (últimos 10 labels) · SQL: SELECT * FROM users WHERE role = 'label' ORDER BY created_at DESC LIMIT 10
 db.users.find({ role: "label" }).sort({ created_at: -1 }).limit(10);
 // Actualizar (suscripción) · SQL: UPDATE users SET is_suscribed = 1, subscription_id = ?, fin_subscription = ? WHERE user_id = ?
-db.users.updateOne({ _id: listener._id }, { $set: { is_suscribed: true, subscription_id: plan._id, fin_subscription: ISODate("2027-01-19T00:00:00Z"), updated_at: now } });
+db.users.updateOne({ _id: listener._id }, { $set: { is_suscribed: true, subscription_id: plan._id.toString(), fin_subscription: ISODate("2027-01-19T00:00:00Z"), updated_at: now } });
 // Borrar · SQL: DELETE FROM users WHERE email = ?
 db.users.deleteOne({ email: "nuevo.artista@melodic.test" });
 ```
@@ -62,9 +62,9 @@ db.albums.deleteOne({ _id: demo });
 
 ```js
 // Crear (con snapshot) · SQL: INSERT INTO songs (name, album_id, file_path, plays) VALUES (?, ?, ?, 0)
-const track = db.songs.insertOne({ name: "Pista nueva", length: 0, plays: NumberLong("0"), file_path: "songs/audio/pista.mp3", image_path: null, album_id: album._id, album: { title: album.title, path: album.path }, artist: { user_id: artist._id, username: artist.username }, created_at: now, updated_at: now }).insertedId;
+const track = db.songs.insertOne({ name: "Pista nueva", length: 0, plays: NumberLong("0"), file_path: "songs/audio/pista.mp3", image_path: null, album_id: album._id.toString(), artist: { user_id: artist._id, username: artist.username }, created_at: now, updated_at: now }).insertedId;
 // Leer (canciones del álbum) · SQL: SELECT * FROM songs WHERE album_id = ?
-db.songs.find({ album_id: album._id });
+db.songs.find({ album_id: album._id.toString() });
 // Leer (explorar) · SQL: SELECT songs.* FROM songs JOIN albums ... JOIN users ... WHERE songs.name LIKE '%lu%' OR users.username LIKE '%lu%'
 db.songs.find({ $or: [{ name: /lu/i }, { "artist.username": /lu/i }] });
 // Leer (explorar sin búsqueda) · SQL: SELECT * FROM songs ORDER BY created_at DESC
@@ -85,7 +85,7 @@ const study = db.playlists.insertOne({ name: "Para estudiar", description: null,
 // Leer (playlists del usuario con conteo) · SQL: SELECT playlists.*, COUNT(playlist_song.song_id) FROM playlists LEFT JOIN playlist_song ... WHERE user_id = ? GROUP BY ... ORDER BY created_at DESC
 db.playlists.aggregate([{ $match: { user_id: listener._id } }, { $sort: { created_at: -1 } }, { $addFields: { songs_count: { $size: "$songs" } } }]);
 // Leer (canciones de la playlist) · SQL: SELECT songs.* FROM songs JOIN playlist_song ON ... WHERE playlist_id = ?
-db.songs.find({ _id: { $in: db.playlists.findOne({ _id: playlist._id }).songs.map(entry => entry.song_id) } });
+db.songs.find({ _id: { $in: db.playlists.findOne({ _id: playlist._id }).songs.map(entry => ObjectId(entry.song_id)) } });
 // Actualizar · SQL: UPDATE playlists SET name = ? WHERE playlist_id = ?
 db.playlists.updateOne({ _id: study }, { $set: { name: "Para estudiar de noche", updated_at: now } });
 // Borrar · SQL: DELETE FROM playlists WHERE playlist_id = ? (playlist_song se borra en cascada)
@@ -109,7 +109,7 @@ db.royalties.deleteOne({ recipient_id: "00000000-0000-0000-0000-000000000000" })
 
 ```js
 // Crear (pago de suscripción) · SQL: INSERT INTO earnings (amount, state, at, subscription) VALUES (?, 'pagado', NOW(), ?)
-const payment = db.earnings.insertOne({ amount: plan.cost, state: "pagado", at: now, subscription: plan._id, comision: null, created_at: now, updated_at: now }).insertedId;
+const payment = db.earnings.insertOne({ amount: plan.cost, state: "pagado", at: now, subscription: plan._id.toString(), comision: null, created_at: now, updated_at: now }).insertedId;
 // Leer (últimos 30 días) · SQL: SELECT SUM(amount) FROM earnings WHERE at >= NOW() - INTERVAL 30 DAY
 db.earnings.aggregate([{ $match: { at: { $gte: new Date(now - 30 * 24 * 3600 * 1000) } } }, { $group: { _id: null, total: { $sum: "$amount" } } }]);
 // Actualizar · SQL: UPDATE earnings SET state = 'reembolsado' WHERE earning_id = ?
@@ -152,8 +152,8 @@ SQL actual: `SELECT` en `playlist_song` para ver si existe y después `INSERT`.
 
 ```js
 db.playlists.updateOne(
-  { _id: playlist._id, user_id: listener._id, "songs.song_id": { $ne: song._id }, "songs.499": { $exists: false } },
-  { $push: { songs: { song_id: song._id, added_at: now } }, $set: { updated_at: now } }
+  { _id: playlist._id, user_id: listener._id, "songs.song_id": { $ne: song._id.toString() }, "songs.499": { $exists: false } },
+  { $push: { songs: { song_id: song._id.toString(), added_at: now } }, $set: { updated_at: now } }
 );
 ```
 
@@ -169,8 +169,8 @@ const before = db.royalties.findOneAndUpdate(
 );
 if (before) {
   const total = Number(before.amount.toString());
-  db.expenses.insertOne({ amount: NumberDecimal((total * 0.70).toFixed(2)), state: "pagado", at: now, from: before._id, user_id: artist._id, created_at: now, updated_at: now });
-  db.earnings.insertOne({ amount: NumberDecimal((total * 0.30).toFixed(2)), state: "pagado", at: now, subscription: null, comision: before._id, created_at: now, updated_at: now });
+  db.expenses.insertOne({ amount: NumberDecimal((total * 0.70).toFixed(2)), state: "pagado", at: now, from: before._id.toString(), user_id: artist._id, created_at: now, updated_at: now });
+  db.earnings.insertOne({ amount: NumberDecimal((total * 0.30).toFixed(2)), state: "pagado", at: now, subscription: null, comision: before._id.toString(), created_at: now, updated_at: now });
 }
 ```
 

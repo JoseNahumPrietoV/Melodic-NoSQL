@@ -6,12 +6,14 @@ use App\Models\Album;
 use App\Models\Royalty;
 use App\Models\Song;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Process\Pool;
+use Illuminate\Support\Facades\Process;
+use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
 class PlayTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshMongoDatabase;
 
     public function test_play_counts_the_song_and_pays_the_independent_artist(): void
     {
@@ -32,7 +34,7 @@ class PlayTest extends TestCase
         $this->play($song);
 
         $this->assertRoyaltyBalance($label->user_id, 0.15);
-        $this->assertDatabaseMissing('royalties', ['recipient_id' => $artist->user_id]);
+        $this->assertDatabaseMissing(Royalty::class, ['recipient_id' => $artist->user_id]);
     }
 
     public function test_consecutive_plays_accumulate_on_the_same_royalty(): void
@@ -45,6 +47,25 @@ class PlayTest extends TestCase
         $this->assertSame(2, (int) $song->refresh()->plays);
         $this->assertRoyaltyBalance($song->album->user_id, 0.30);
         $this->assertSame(1, Royalty::count());
+    }
+
+    public function test_concurrent_plays_add_exactly_fifteen_cents_each(): void
+    {
+        $song = Song::factory()->create();
+        $plays = 20;
+
+        $results = Process::pool(function (Pool $pool) use ($song, $plays) {
+            foreach (range(1, $plays) as $attempt) {
+                $pool->env([
+                    'MONGODB_URI' => env('MONGODB_TEST_URI'),
+                    'MONGODB_DATABASE' => config('database.connections.mongodb.database'),
+                ])->command([PHP_BINARY, base_path('tests/Support/register-play.php'), $song->song_id]);
+            }
+        })->start()->wait();
+
+        $this->assertTrue($results->collect()->every(fn ($result) => $result->successful()));
+        $this->assertSame($plays, (int) $song->refresh()->plays);
+        $this->assertSame('3.00', Royalty::where('recipient_id', $song->album->user_id)->firstOrFail()->amount);
     }
 
     private function play(Song $song)

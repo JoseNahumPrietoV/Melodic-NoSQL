@@ -52,7 +52,7 @@
     @php
         // Creamos un array limpio para JavaScript
         // Usamos values() al final para asegurar que sea un array JSON [..] y no un objeto {..}
-        $playlistSongsJson = $playlist->songs->map(function($song) {
+        $playlistSongsJson = $songs->map(function($song) {
             return [
                 'id' => $song->song_id,
                 'url' => asset('storage/' . $song->file_path),
@@ -90,7 +90,7 @@
                 Creada por <span class="font-bold text-orange-400">{{ $playlist->user->username }}</span>
             </h2>
 
-            <p class="text-gray-400 mt-1">{{ $playlist->songs->count() }} canciones</p>
+            <p class="text-gray-400 mt-1">{{ $songs->count() }} canciones</p>
         </div>
     </section>
 
@@ -98,7 +98,7 @@
         <h2 class="text-2xl font-semibold mb-4 text-yellow-400">Contenido</h2>
 
         <div class="space-y-2">
-            @forelse ($playlist->songs as $index => $song)
+            @forelse ($songs as $index => $song)
                 <div class="flex items-center justify-between p-3 rounded-lg hover:bg-purple-900 bg-opacity-40 transition group">
                     <div class="flex items-center gap-4">
                         <span class="text-lg text-gray-400 w-6 text-center">{{ $index + 1 }}</span>

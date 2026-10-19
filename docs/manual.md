@@ -19,9 +19,10 @@ Levantar la app:
 composer run dev
 ```
 
-Correr las pruebas:
+Correr las pruebas. Usan MongoDB (base `melodic_testing` con el usuario `melodic_test`), así que antes hay que llenar `MONGO_TEST_PASSWORD` y `MONGODB_TEST_URI` en `.env`, levantar el stack con `compose.localhost.yaml` y crear el usuario con el comando de "Usuarios de MongoDB":
 
 ```bash
+docker compose -f compose.yaml -f compose.localhost.yaml up --detach
 composer test
 ```
 
@@ -55,7 +56,12 @@ Aplicar cambios de `compose.yaml`, del `Dockerfile` o de `.env` después de actu
 
 ```bash
 docker compose up --build --detach --force-recreate --remove-orphans
+docker exec melodic-app php artisan view:clear
 ```
+
+`view:clear` borra las vistas compiladas del despliegue anterior, que el volumen `app-storage` conserva.
+
+El corte a MongoDB y su reversión están en `docs/mongodb/03-corte-y-reversion.md`.
 
 | Servicio | Desde el host | Dentro de Docker |
 |---|---|---|
@@ -115,6 +121,12 @@ docker exec melodic-app php artisan melodic:migrate-to-mongo
 
 Opciones: `--collection=songs` carga una sola colección (sus referencias ya deben estar cargadas) y `--from=sqlite` cambia la conexión de origen. El comando termina con código 1 si alguna fila tuvo errores.
 
+Verificar que MongoDB tiene lo mismo que la base relacional (conteos, montos, reproducciones, canciones por playlist, referencias y una muestra campo por campo). Termina con código 1 si hay diferencias:
+
+```bash
+docker exec melodic-app php artisan melodic:verify-mongo
+```
+
 ## Usuarios de MongoDB
 
 | Usuario | Permisos | Uso |
@@ -122,6 +134,7 @@ Opciones: `--collection=songs` carga una sola colección (sus referencias ya deb
 | `melodic_app` | `readWrite` sobre `melodic` | La aplicación |
 | `melodic_readonly` | `read` sobre `melodic` | Consultas y reportes |
 | `melodic_backup` | `backup` | `mongodump` |
+| `melodic_test` | `readWrite` sobre `melodic_testing` | `composer test`; solo se crea si `MONGO_TEST_PASSWORD` tiene valor |
 
 Se crean solos cuando el volumen está vacío. En un volumen que ya existe, o después de cambiar sus contraseñas en `.env` y recrear el contenedor, aplicarlos con:
 

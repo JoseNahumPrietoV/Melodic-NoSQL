@@ -76,10 +76,10 @@ Revisión de la sección 1.4 de `scrum.md` contra el código actual.
 |---|---|---|
 | 1 | El registro asignaba el rol desde el formulario | Resuelto en E2-T15 |
 | 2 | Secretos en `compose.yaml` y MongoDB publicado | Resuelto en E2-T18 y E4-T21 |
-| 3 | Condiciones de carrera en reproducir y retirar | Vigente; E1-T11 |
-| 4 | Tres implementaciones del retiro; `DashboardController::withdraw` sin ruta y la de label sin `from` ni `comision` | Vigente; E1-T11 |
-| 5 | `DATE_FORMAT` rompe el dashboard de admin en SQLite | Vigente; E1-T12. La prueba queda incompleta en SQLite |
-| 6 | Montos calculados con `float` | Vigente; E1-T03 y E1-T11 |
+| 3 | Condiciones de carrera en reproducir y retirar | Resuelto en E1-T11: `$inc` y `findOneAndUpdate` dentro de una transacción |
+| 4 | Tres implementaciones del retiro; `DashboardController::withdraw` sin ruta y la de label sin `from` ni `comision` | Resuelto en E1-T11: un solo `WalletService` |
+| 5 | `DATE_FORMAT` rompe el dashboard de admin en SQLite | Resuelto en E1-T12: `$group` por `$dateToString` |
+| 6 | Montos calculados con `float` | Resuelto en E1-T11: bcmath y `Decimal128` |
 | 7 | `plays` nunca se escribe | Vigente; backlog C01 |
 | 8 | El `down()` de `create_songs_table` borra `songs` antes que `plays` | Vigente; backlog C04 |
 | 9 | `SongController@store` sin transacción | Vigente; E1-T09 |

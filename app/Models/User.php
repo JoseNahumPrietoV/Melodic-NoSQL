@@ -2,22 +2,32 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Support\Str;
+use MongoDB\Laravel\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasUuids;
+    use HasFactory, HasUuids, Notifiable;
 
-    protected $primaryKey = 'user_id';
-    protected $keyType = 'string';
+    protected $connection = 'mongodb';
+
+    protected $table = 'users';
+
     public $incrementing = false;
+
+    protected $attributes = [
+        'role' => 'user',
+        'is_suscribed' => false,
+        'fin_subscription' => null,
+        'subscription_id' => null,
+        'label' => null,
+        'path' => null,
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -57,15 +67,9 @@ class User extends Authenticatable
         'fin_subscription' => 'date',
     ];
 
-    protected static function boot()
+    protected function userId(): Attribute
     {
-        parent::boot();
-
-        static::creating(function ($model) {
-            if (!$model->user_id) {
-                $model->user_id = (string) Str::uuid();
-            }
-        });
+        return Attribute::get(fn () => $this->getKey());
     }
 
     /**
@@ -75,16 +79,14 @@ class User extends Authenticatable
      */
     public function albums()
     {
-        return $this->hasMany(Album::class, 'user_id', 'user_id');
+        return $this->hasMany(Album::class, 'user_id');
     }
 
     /**
      * Relación: Un usuario (oyente) tiene muchas playlists
-     *
-     * @return HasMany
      */
     public function playlists(): HasMany
     {
-        return $this->hasMany(Playlist::class, 'user_id', 'user_id');
+        return $this->hasMany(Playlist::class, 'user_id');
     }
 }

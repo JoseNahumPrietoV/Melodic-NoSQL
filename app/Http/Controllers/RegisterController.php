@@ -20,7 +20,7 @@ class RegisterController extends Controller
     {
         $request->validate([
             'name' => ['required'],
-            'email' => ['required', 'email', 'unique:users,email'],
+            'email' => ['required', 'email', Rule::unique(User::class, 'email')],
             'password' => ['required', 'min:6'],
             'account_type' => ['required', Rule::in(['user', 'artist'])],
         ]);
