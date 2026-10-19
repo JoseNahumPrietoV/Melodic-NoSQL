@@ -60,15 +60,7 @@ class PlaylistController extends Controller
             ->whereNotIn('_id', $playlist->songIds());
 
         if ($request->has('search')) {
-            $searchTerm = $request->input('search');
-            $query->where(function($q) use ($searchTerm) {
-                $q->where('name', 'LIKE', "%{$searchTerm}%")
-                    ->orWhereHas('album.artist', function($q2) use ($searchTerm) {
-                        $q2->where('username', 'LIKE', "%{$searchTerm}%");
-                    });
-            });
-
-            $availableSongs = $query->get();
+            $availableSongs = $query->matching((string) $request->input('search'))->get();
         } else {
             $availableSongs = collect();
         }

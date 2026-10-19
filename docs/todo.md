@@ -14,6 +14,7 @@
 - E1-T10 · Embeber las canciones en las playlists (Persona A)
 - E1-T11 · Hacer atómicos los flujos de dinero (Persona A)
 - E1-T12 · Reescribir el dashboard de admin con agregaciones (Persona B)
+- E1-T13 · Migrar la búsqueda de explorar y de playlists (Persona B)
 - E2-T15 · Restringir los roles permitidos en el registro público (Persona B)
 - E2-T16 · Limitar los intentos de login y registro (Persona B)
 - E2-T17 · Crear usuarios de MongoDB con mínimo privilegio (Persona B)
@@ -24,7 +25,6 @@
 
 ## Pendientes
 
-- E1-T13 · Migrar la búsqueda de explorar y de playlists (Persona B)
 - E1-T14 · Ejecutar el corte a MongoDB y ensayar la reversión (Persona A)
 - E3-T20 · Servir la app por HTTPS con un proxy inverso (Persona B)
 - E4-T22 · Configurar el firewall del host (Persona B)

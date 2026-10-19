@@ -40,6 +40,29 @@ class ExploreTest extends TestCase
             ->assertViewHas('songs', fn ($songs) => $songs->pluck('song_id')->all() === [$match->song_id]);
     }
 
+    public function test_explore_treats_regex_characters_as_plain_text(): void
+    {
+        $match = Song::factory()->create(['name' => 'Tema (en vivo)']);
+        Song::factory()->create(['name' => 'Tema en vivo']);
+
+        $this->explore('(en vivo')
+            ->assertOk()
+            ->assertViewHas('songs', fn ($songs) => $songs->pluck('song_id')->all() === [$match->song_id]);
+
+        $this->explore('.*')
+            ->assertViewHas('songs', fn ($songs) => $songs->isEmpty());
+    }
+
+    public function test_listener_dashboard_shows_six_random_songs(): void
+    {
+        Song::factory()->count(8)->create();
+
+        $this->actingAs(User::factory()->subscribed()->create())
+            ->get(route('dashboard.user'))
+            ->assertOk()
+            ->assertViewHas('songs', fn ($songs) => $songs->count() === 6 && $songs->every(fn (Song $song) => $song->album->artist !== null));
+    }
+
     private function explore(?string $query = null)
     {
         return $this->actingAs(User::factory()->subscribed()->create())

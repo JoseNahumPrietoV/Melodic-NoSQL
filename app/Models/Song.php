@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use MongoDB\BSON\Regex;
 use MongoDB\Laravel\Eloquent\Model;
 
 class Song extends Model
@@ -52,6 +54,15 @@ class Song extends Model
     public function album(): BelongsTo
     {
         return $this->belongsTo(Album::class, 'album_id');
+    }
+
+    public function scopeMatching(Builder $query, string $term): void
+    {
+        $pattern = new Regex(preg_quote($term), 'i');
+
+        $query->where(fn (Builder $songs) => $songs
+            ->where('name', 'regex', $pattern)
+            ->orWhere('artist.username', 'regex', $pattern));
     }
 
     private function snapshotArtist(): void

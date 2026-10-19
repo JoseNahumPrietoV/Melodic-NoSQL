@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Song;
 use App\Models\Playlist;
 use Illuminate\Support\Facades\View;
+use MongoDB\Collection;
 
 class DashboardController extends Controller
 {
@@ -20,10 +21,8 @@ class DashboardController extends Controller
      */
     public function user()
     {
-        $songs = Song::with('album.artist')
-            ->inRandomOrder()
-            ->take(6)
-            ->get();
+        $songs = Song::raw(fn (Collection $collection) => $collection->aggregate([['$sample' => ['size' => 6]]]))
+            ->load('album.artist');
 
         $user = Auth::user();
         $playlists = $user->playlists()->latest()->get();
@@ -116,10 +115,7 @@ class DashboardController extends Controller
         $songsQuery = Song::with('album.artist');
 
         if ($query) {
-            $songsQuery->where('name', 'LIKE', "%{$query}%")
-                ->orWhereHas('album.artist', function ($q) use ($query) {
-                    $q->where('username', 'LIKE', "%{$query}%");
-                });
+            $songsQuery->matching($query);
         } else {
             $songsQuery->latest();
         }
