@@ -29,6 +29,9 @@ services:
     volumes:
       - app-storage:/var/www/html/storage
       - app-database:/var/lib/melodic
+    networks:
+      - default
+      - backend
     depends_on:
       mysql:
         condition: service_healthy
@@ -58,8 +61,8 @@ services:
     image: mongo:8.0
     container_name: melodic-mongodb
     restart: unless-stopped
-    ports:
-      - "27018:27017"
+    networks:
+      - backend
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
@@ -89,6 +92,10 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
+
+networks:
+  backend:
+    internal: true
 
 secrets:
   mongodb_keyfile:
