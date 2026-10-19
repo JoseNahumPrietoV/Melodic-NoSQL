@@ -115,6 +115,12 @@ docker exec melodic-app php artisan melodic:migrate-to-mongo
 
 Opciones: `--collection=songs` carga una sola colección (sus referencias ya deben estar cargadas) y `--from=sqlite` cambia la conexión de origen. El comando termina con código 1 si alguna fila tuvo errores.
 
+Verificar que MongoDB tiene lo mismo que la base relacional (conteos, montos, reproducciones, canciones por playlist, referencias y una muestra campo por campo). Termina con código 1 si hay diferencias:
+
+```bash
+docker exec melodic-app php artisan melodic:verify-mongo
+```
+
 ## Usuarios de MongoDB
 
 | Usuario | Permisos | Uso |
