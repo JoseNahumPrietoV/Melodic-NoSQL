@@ -61,7 +61,7 @@ services:
     container_name: melodic-mysql
     restart: unless-stopped
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     environment:
       MYSQL_DATABASE: melodic
       MYSQL_USER: melodic

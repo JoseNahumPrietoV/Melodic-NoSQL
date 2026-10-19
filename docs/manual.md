@@ -66,7 +66,7 @@ El corte a MongoDB y su reversión están en `docs/mongodb/03-corte-y-reversion.
 | Servicio | Desde el host | Dentro de Docker |
 |---|---|---|
 | App | `https://localhost` (Caddy; `http://` redirige) | `app:8000` |
-| MySQL | `localhost:3306` | `mysql:3306` |
+| MySQL | `127.0.0.1:3306` | `mysql:3306` |
 | MongoDB | Solo con `compose.localhost.yaml`: `127.0.0.1:27018` | `mongodb:27017` |
 
 ## HTTPS
@@ -79,6 +79,18 @@ curl -I --cacert caddy-root.crt https://localhost
 ```
 
 Después importar `caddy-root.crt` en el navegador o en el sistema (en Arch: `sudo trust anchor caddy-root.crt`).
+
+## Firewall
+
+`docker/firewall/ufw-setup.sh` deja el host con entrada denegada salvo 80/tcp, 443/tcp, 51820/udp y el 22 solo desde la red de la VPN (`VPN_SUBNET`, por defecto `172.30.80.0/24`). También agrega a `/etc/ufw/after.rules` las reglas de la cadena `DOCKER-USER`, porque Docker se salta ufw en los puertos publicados. No borra reglas existentes y se puede repetir. Aplicar con una consola local abierta:
+
+```bash
+sudo sh docker/firewall/ufw-setup.sh
+sudo ufw status verbose
+sudo iptables -S DOCKER-USER
+```
+
+Revertir: borrar el bloque `MELODIC DOCKER-USER` de `/etc/ufw/after.rules`, quitar las reglas con `sudo ufw delete allow 80/tcp` (y las demás) y ejecutar `sudo ufw reload`.
 
 ## MongoDB
 
