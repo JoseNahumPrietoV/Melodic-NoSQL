@@ -216,3 +216,35 @@ session.withTransaction(() => {
 });
 session.endSession();
 ```
+
+## Explain
+
+`explain("executionStats")` de cada consulta de la sección 1.3 de `scrum.md`, tal como la ejecuta la app, sobre los datos del ensayo de corte (2026-10-19). Las escrituras se explican sin aplicarse.
+
+| Consulta | Plan ganador | Índice | Claves examinadas | Documentos examinados | Devueltos |
+|---|---|---|---|---|---|
+| Login por email | `EXPRESS_IXSCAN` | `email_1` | 1 | 1 | 1 |
+| Artistas de un label | `FETCH > IXSCAN` | `label_1` | 2 | 2 | 2 |
+| Últimos 10 labels | `LIMIT > FETCH > IXSCAN` | `role_1_created_at_-1` | 2 | 2 | 2 |
+| Álbumes del artista | `FETCH > IXSCAN` | `user_id_1` | 2 | 2 | 2 |
+| Canciones de un álbum | `FETCH > IXSCAN` | `album_id_1` | 3 | 3 | 3 |
+| Canciones de los álbumes de un label | `FETCH > IXSCAN` | `album_id_1` | 13 | 12 | 12 |
+| Explorar sin búsqueda | `FETCH > IXSCAN` | `created_at_-1` | 18 | 18 | 18 |
+| Explorar con búsqueda (regex) | `SUBPLAN > COLLSCAN` | — | 0 | 18 | 3 |
+| Playlists del usuario | `FETCH > IXSCAN` | `user_id_1_created_at_-1` | 6 | 6 | 6 |
+| Canciones de una playlist | `EXPRESS_IXSCAN` | `_id_` | 1 | 1 | 1 |
+| Añadir a playlist ($push) | `UPDATE > FETCH > IXSCAN` | `_id_` | 1 | 1 | 0 |
+| Reproducir: $inc plays | `EXPRESS_UPDATE` | `_id_` | 1 | 1 | 0 |
+| Reproducir: $inc regalía | `UPDATE > FETCH > IXSCAN` | `recipient_id_1` | 1 | 1 | 0 |
+| Saldo del artista o label | `EXPRESS_IXSCAN` | `recipient_id_1` | 1 | 1 | 1 |
+| Retiro (findOneAndUpdate) | `UPDATE > FETCH > IXSCAN` | `recipient_id_1` | 1 | 1 | 0 |
+| Últimos 5 retiros | `LIMIT > FETCH > IXSCAN` | `user_id_1_at_-1` | 5 | 5 | 5 |
+| Ingresos de 6 meses por mes | `GROUP > FETCH > IXSCAN` | `at_1` | 18 | 18 | 3 |
+| Total de ingresos | `GROUP > COLLSCAN` | — | 0 | 18 | 1 |
+| Planes de suscripción | `COLLSCAN` | — | 0 | 2 | 2 |
+
+- Todas las consultas filtradas usan un índice: `IXSCAN`, o `EXPRESS_IXSCAN` y `EXPRESS_UPDATE` cuando buscan por `_id` o por un índice único. En todas, los documentos examinados son iguales a los devueltos (en las escrituras, al documento modificado).
+- En "Ingresos de 6 meses por mes", `Devueltos` son los grupos; el índice `at_1` entrega solo los 18 ingresos del rango.
+- `COLLSCAN` justificados (E1-T03): la búsqueda con regex, que tampoco usa índice con `LIKE '%q%'` en SQL; el total de ingresos del dashboard de admin, de baja frecuencia; y la lista de planes, un catálogo de 2 documentos.
+- No faltó ningún índice, así que no hubo migración nueva.
+
