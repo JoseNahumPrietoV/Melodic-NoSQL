@@ -21,8 +21,11 @@ services:
       DB_USERNAME: melodic
       DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
       SESSION_DRIVER: database
+      SESSION_CONNECTION: mysql
       CACHE_STORE: database
+      DB_CACHE_CONNECTION: mysql
       QUEUE_CONNECTION: database
+      DB_QUEUE_CONNECTION: mysql
       FILESYSTEM_DISK: local
       MONGODB_URI: mongodb://melodic_app:${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required}@mongodb:27017/melodic?authSource=admin&replicaSet=rs0&tls=true&tlsCAFile=/run/secrets/mongodb_tls_ca
       MONGODB_DATABASE: melodic

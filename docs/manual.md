@@ -56,7 +56,12 @@ Aplicar cambios de `compose.yaml`, del `Dockerfile` o de `.env` después de actu
 
 ```bash
 docker compose up --build --detach --force-recreate --remove-orphans
+docker exec melodic-app php artisan view:clear
 ```
+
+`view:clear` borra las vistas compiladas del despliegue anterior, que el volumen `app-storage` conserva.
+
+El corte a MongoDB y su reversión están en `docs/mongodb/03-corte-y-reversion.md`.
 
 | Servicio | Desde el host | Dentro de Docker |
 |---|---|---|
