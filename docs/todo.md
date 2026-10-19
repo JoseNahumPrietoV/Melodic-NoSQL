@@ -28,8 +28,8 @@
 - E4-T24 · Verificar los protocolos TLS y los puertos expuestos (Persona B)
 - E5-T25 · Documentar el catálogo de consultas CRUD en mongosh (Persona A)
 - E5-T26 · Validar con explain() que las consultas críticas usan índices (Persona B)
+- E6-T28 · Probar un respaldo y una restauración reales (Persona B)
 
 ## Pendientes
 
 - E6-T27 · Escribir el runbook de comandos (Persona B)
-- E6-T28 · Probar un respaldo y una restauración reales (Persona B)
