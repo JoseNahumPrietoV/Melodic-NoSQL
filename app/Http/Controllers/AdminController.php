@@ -7,8 +7,9 @@ use App\Models\Earning;
 use App\Models\Expense;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use MongoDB\BSON\UTCDateTime;
+use MongoDB\Collection;
 use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
@@ -18,34 +19,31 @@ class AdminController extends Controller
      */
     public function index()
     {
-        $totalEarnings = Earning::sum('amount');
+        $totalEarnings = $this->sumAmount(Earning::class);
 
-        $totalExpenses = Expense::sum('amount');
+        $totalExpenses = $this->sumAmount(Expense::class);
 
-        $netProfit = $totalEarnings - $totalExpenses;
+        $netProfit = bcsub($totalEarnings, $totalExpenses, 2);
 
-        $monthlyData = Earning::select(
-            DB::raw('sum(amount) as sum'),
-            DB::raw("DATE_FORMAT(at, '%Y-%m') as month")
-        )
-            ->where('at', '>=', Carbon::now()->subMonths(6))
-            ->groupBy('month')
-            ->orderBy('month')
-            ->get();
+        $monthlyData = $this->aggregate(Earning::class, [
+            ['$match' => ['at' => ['$gte' => new UTCDateTime(Carbon::now()->subMonths(6))]]],
+            ['$group' => ['_id' => ['$dateToString' => ['format' => '%Y-%m', 'date' => '$at']], 'sum' => ['$sum' => '$amount']]],
+            ['$sort' => ['_id' => 1]],
+        ]);
 
         $labels = [];
         $data = [];
 
         foreach ($monthlyData as $row) {
-            $labels[] = Carbon::createFromFormat('Y-m', $row->month)->format('F Y');
-            $data[] = $row->sum;
+            $labels[] = Carbon::createFromFormat('!Y-m', $row['_id'])->format('F Y');
+            $data[] = (float) (string) $row['sum'];
         }
 
-        $last30DaysEarnings = Earning::where('at', '>=', Carbon::now()->subDays(30))->sum('amount');
+        $last30DaysEarnings = $this->sumAmount(Earning::class, ['at' => ['$gte' => new UTCDateTime(Carbon::now()->subDays(30))]]);
 
-        $dailyAverage = $last30DaysEarnings / 30;
+        $dailyAverage = bcdiv($last30DaysEarnings, '30', 4);
 
-        $projectedRevenue = $dailyAverage * 30;
+        $projectedRevenue = bcmul($dailyAverage, '30', 2);
 
         $labelsList = User::where('role', 'label')->latest()->take(10)->get();
 
@@ -63,6 +61,23 @@ class AdminController extends Controller
     /**
      * Almacena una nueva Label (Disquera) en la base de datos.
      */
+    private function sumAmount(string $model, array $match = []): string
+    {
+        $result = $this->aggregate($model, [
+            ['$match' => (object) $match],
+            ['$group' => ['_id' => null, 'total' => ['$sum' => '$amount']]],
+        ]);
+
+        return bcadd((string) ($result[0]['total'] ?? '0'), '0', 2);
+    }
+
+    private function aggregate(string $model, array $pipeline): array
+    {
+        return $model::query()->toBase()->raw(
+            fn (Collection $collection) => $collection->aggregate($pipeline, ['typeMap' => ['root' => 'array', 'document' => 'array']])
+        )->toArray();
+    }
+
     public function storeLabel(Request $request)
     {
         $request->validate([
