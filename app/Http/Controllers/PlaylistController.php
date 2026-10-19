@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Song;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class PlaylistController extends Controller
 {
@@ -53,12 +54,10 @@ class PlaylistController extends Controller
             abort(403, 'No tienes permiso.');
         }
 
-        $playlist->load('songs.album.artist', 'user');
-
-        $songIdsInPlaylist = $playlist->songs->pluck('song_id');
+        $playlist->load('user');
 
         $query = Song::with('album.artist')
-            ->whereNotIn('song_id', $songIdsInPlaylist);
+            ->whereNotIn('_id', $playlist->songIds());
 
         if ($request->has('search')) {
             $searchTerm = $request->input('search');
@@ -76,6 +75,7 @@ class PlaylistController extends Controller
 
         return view('playlists.show', [
             'playlist'       => $playlist,
+            'songs'          => $playlist->songModels(),
             'availableSongs' => $availableSongs,
             'search'         => $request->input('search')
         ]);
@@ -91,7 +91,7 @@ class PlaylistController extends Controller
     public function addSong(Request $request, Playlist $playlist)
     {
         $request->validate([
-            'song_id' => 'required|exists:songs,song_id'
+            'song_id' => ['required', Rule::exists(Song::class, '_id')],
         ]);
 
         if ($playlist->user_id !== auth()->id()) {
@@ -100,13 +100,15 @@ class PlaylistController extends Controller
 
         $songId = $request->input('song_id');
 
-        if ($playlist->songs()->find($songId)) {
+        if ($playlist->addSong($songId)) {
+            return back()->with('success', '¡Canción añadida!');
+        }
+
+        if (in_array($songId, $playlist->songIds(), true)) {
             return back()->with('info', 'Esa canción ya está en tu playlist.');
         }
 
-        $playlist->songs()->attach($songId);
-
-        return back()->with('success', '¡Canción añadida!');
+        return back()->with('error', 'La playlist ya tiene el máximo de '.Playlist::MAX_SONGS.' canciones.');
     }
 
     /**
@@ -119,7 +121,6 @@ class PlaylistController extends Controller
         $user = Auth::user();
 
         $playlists = $user->playlists()
-            ->withCount('songs')
             ->latest()
             ->get();
 

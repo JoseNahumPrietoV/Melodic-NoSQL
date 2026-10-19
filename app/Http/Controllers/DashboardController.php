@@ -28,7 +28,7 @@ class DashboardController extends Controller
             ->get();
 
         $user = Auth::user();
-        $playlists = $user->playlists()->withCount('songs')->latest()->get();
+        $playlists = $user->playlists()->latest()->get();
 
         return view('dashboards.user', [
             'songs'     => $songs,
