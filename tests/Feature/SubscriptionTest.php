@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Earning;
 use App\Models\Subscription;
 use App\Models\User;
+use Database\Seeders\SubscriptionSeeder;
 use Tests\Concerns\RefreshMongoDatabase;
 use Tests\TestCase;
 
@@ -80,5 +81,19 @@ class SubscriptionTest extends TestCase
         $this->assertFalse($listener->is_suscribed);
         $this->assertNull($listener->fin_subscription);
         $this->assertNull($listener->subscription_id);
+    }
+
+    public function test_plan_seeder_can_run_on_every_start_without_duplicating_plans(): void
+    {
+        $this->seed(SubscriptionSeeder::class);
+        $this->seed(SubscriptionSeeder::class);
+
+        $this->assertSame(2, Subscription::count());
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('subscription.index'))
+            ->assertOk()
+            ->assertSee('Premium Mensual')
+            ->assertSee('Premium Anual');
     }
 }
