@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: melodic-app
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: APP_NAME
+        value: Melodic
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: APP_URL
+        sync: false
+      - key: APP_LOCALE
+        value: es
+      - key: APP_FALLBACK_LOCALE
+        value: es
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: DB_DATABASE
+        value: /var/lib/melodic/database.sqlite
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_CONNECTION
+        value: sqlite
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: database
+      - key: DB_CACHE_CONNECTION
+        value: sqlite
+      - key: QUEUE_CONNECTION
+        value: sync
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DATABASE
+        value: melodic
+    disk:
+      name: melodic-data
+      mountPath: /var/lib/melodic
+      sizeGB: 1
