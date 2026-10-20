@@ -49,13 +49,16 @@ RUN apt-get update \
     && docker-php-ext-enable mongodb \
     && rm -rf /var/lib/apt/lists/* /tmp/pear
 
+COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+
 COPY --from=vendor /var/www/html/vendor ./vendor
 COPY --from=assets /var/www/html/public/build ./public/build
 COPY . .
 COPY --from=vendor /var/www/html/bootstrap/cache ./bootstrap/cache
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions \
-    storage/framework/views storage/logs bootstrap/cache /var/lib/melodic \
+    storage/framework/views storage/logs storage/app/public bootstrap/cache /var/lib/melodic \
+    && ln -sfn /var/www/html/storage/app/public public/storage \
     && touch /var/lib/melodic/database.sqlite \
     && chown -R www-data:www-data storage bootstrap/cache /var/lib/melodic
 

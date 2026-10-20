@@ -93,3 +93,6 @@ Verifica la migración con:
 ```bash
 php artisan melodic:verify-mongo
 ```
+
+### Archivos subidos (canciones y portadas)
+La imagen admite archivos de hasta 25 MB por archivo y 30 MB por petición (`docker/php/uploads.ini`) y crea el enlace `public/storage`, así que los audios y portadas se sirven en `/storage/...`. En el plan Free de Render el disco del contenedor no es persistente: los archivos subidos se pierden en cada redespliegue o reinicio. Para conservarlos hace falta un disco persistente (planes de pago) o un almacenamiento externo como S3.
