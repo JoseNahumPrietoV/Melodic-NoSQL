@@ -32,7 +32,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen font-sans flex overflow-hidden">
+<body class="bg-gray-900 text-white h-screen font-sans flex overflow-hidden">
 
 <!-- SIDEBAR -->
 <aside class="w-64 bg-black border-r border-purple-900 flex-shrink-0 hidden md:flex flex-col transition-all duration-300">
