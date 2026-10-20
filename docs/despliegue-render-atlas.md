@@ -62,7 +62,7 @@ Si prefieres crear el servicio como **Web Service** estándar:
   - `MONGODB_URI`: Tu URI de Atlas (`mongodb+srv://...`).
   - `MONGODB_DATABASE`: `melodic`
 
-*(El contenedor ya cuenta con un disco SQLite persistente configurado en `/var/lib/melodic` para sesiones y caché relacionales sin requerir MySQL extra).*
+*(El contenedor inicializa automáticamente la base SQLite local en `/var/lib/melodic/database.sqlite` para sesiones y caché, compatible al 100% con el plan Free de Render sin necesidad de aprovisionar discos ni servicios SQL adicionales).*
 
 ---
 
