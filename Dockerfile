@@ -63,4 +63,4 @@ USER www-data
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "for attempt in $(seq 1 30); do php artisan migrate --force && break; echo \"Waiting for database (attempt $attempt/30)...\"; sleep 2; done; php artisan migrate --path=database/migrations/mongodb --force; php artisan migrate:status >/dev/null || exit 1; exec php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]
+CMD ["sh", "-c", "for attempt in $(seq 1 30); do php artisan migrate --force && break; echo \"Waiting for database (attempt $attempt/30)...\"; sleep 2; done; php artisan migrate --path=database/migrations/mongodb --force; php artisan db:seed --class=SubscriptionSeeder --force; php artisan migrate:status >/dev/null || exit 1; exec php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]

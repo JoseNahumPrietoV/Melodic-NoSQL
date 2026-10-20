@@ -71,6 +71,7 @@ Si prefieres crear el servicio como **Web Service** estándar:
 Al iniciar el contenedor, el script de arranque ejecutará automáticamente:
 1. `php artisan migrate --force` (tablas de sesiones y caché en SQLite).
 2. `php artisan migrate --path=database/migrations/mongodb --force` (colecciones e índices en MongoDB Atlas).
+3. `php artisan db:seed --class=SubscriptionSeeder --force` (planes de suscripción; sin ellos los oyentes no pueden pasar de la página Premium). Se puede repetir en cada arranque sin duplicar planes.
 
 ### Para sembrar los datos iniciales (Seeders)
 Desde la pestaña **Shell** de tu servicio en Render (o localmente apuntando a Atlas en `.env`):
