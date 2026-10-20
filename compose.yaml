@@ -5,50 +5,128 @@ services:
       dockerfile: Dockerfile
     container_name: melodic-app
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     environment:
       APP_NAME: Melodic
-      APP_ENV: local
-      APP_KEY: base64:V0pVZk9xS3h4c3R4Qm1Qb3d6R2h5TnNqQW1TQ3V4eGs=
-      APP_DEBUG: "true"
-      APP_URL: http://localhost:8000
+      APP_ENV: ${APP_ENV:-production}
+      APP_KEY: ${APP_KEY:?APP_KEY is required}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: https://localhost
       APP_LOCALE: es
-      DB_CONNECTION: sqlite
-      DB_DATABASE: /var/lib/melodic/database.sqlite
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: melodic
+      DB_USERNAME: melodic
+      DB_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
       SESSION_DRIVER: database
+      SESSION_CONNECTION: mysql
+      SESSION_SECURE_COOKIE: "true"
       CACHE_STORE: database
+      DB_CACHE_CONNECTION: mysql
       QUEUE_CONNECTION: database
+      DB_QUEUE_CONNECTION: mysql
       FILESYSTEM_DISK: local
-      # Conexión reservada para la futura migración a MongoDB.
-      MONGODB_URI: mongodb://root:root@mongodb:27017/melodic?authSource=admin
+      MONGODB_URI: mongodb://melodic_app:${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required}@mongodb:27017/melodic?authSource=admin&replicaSet=rs0&tls=true&tlsCAFile=/run/secrets/mongodb_tls_ca
       MONGODB_DATABASE: melodic
     volumes:
       - app-storage:/var/www/html/storage
       - app-database:/var/lib/melodic
+      - mongodb-secrets:/run/secrets:ro
+    networks:
+      - default
+      - backend
     depends_on:
+      mysql:
+        condition: service_healthy
       mongodb:
         condition: service_healthy
+
+  proxy:
+    image: caddy:2.10
+    container_name: melodic-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/proxy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+  mysql:
+    image: mysql:8.4
+    container_name: melodic-mysql
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3306:3306"
+    environment:
+      MYSQL_DATABASE: melodic
+      MYSQL_USER: melodic
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+    volumes:
+      - mysql-data-clean:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   mongodb:
     image: mongo:8.0
     container_name: melodic-mongodb
     restart: unless-stopped
-    ports:
-      - "27017:27017"
+    user: root
+    networks:
+      - backend
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: root
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?MONGO_ROOT_USERNAME is required}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?MONGO_ROOT_PASSWORD is required}
       MONGO_INITDB_DATABASE: melodic
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?MONGO_APP_PASSWORD is required}
+      MONGO_READONLY_PASSWORD: ${MONGO_READONLY_PASSWORD:?MONGO_READONLY_PASSWORD is required}
+      MONGO_BACKUP_PASSWORD: ${MONGO_BACKUP_PASSWORD:?MONGO_BACKUP_PASSWORD is required}
+      MONGO_TEST_PASSWORD: ${MONGO_TEST_PASSWORD:-}
+    command:
+      - bash
+      - -c
+      - >-
+        install -m 400 -o mongodb -g mongodb /run/secrets/mongodb_keyfile /data/configdb/keyfile
+        && install -m 400 -o mongodb -g mongodb /run/secrets/mongodb_tls_certificate /data/configdb/server.pem
+        && exec docker-entrypoint.sh mongod --replSet rs0 --keyFile /data/configdb/keyfile --bind_ip_all
+        --tlsMode requireTLS --tlsCertificateKeyFile /data/configdb/server.pem
+        --tlsCAFile /run/secrets/mongodb_tls_ca --tlsAllowConnectionsWithoutCertificates
+        --tlsDisabledProtocols TLS1_0,TLS1_1 --tlsCipherConfig ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20
     volumes:
-      - mongodb-data:/data/db
+      - mongodb-data-clean:/data/db
+      - ./docker/mongo/init:/docker-entrypoint-initdb.d:ro,Z
+      - mongodb-secrets:/run/secrets:ro
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand({ ping: 1 }).ok' | grep 1"]
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --tls --tlsCAFile /run/secrets/mongodb_tls_ca
+          -u "$$MONGO_INITDB_ROOT_USERNAME" -p "$$MONGO_INITDB_ROOT_PASSWORD"
+          --eval "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongodb:27017' }] }).ok }"
+          | grep -qx 1
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+networks:
+  backend:
+    internal: true
 
 volumes:
+  caddy-data:
+  caddy-config:
   app-storage:
   app-database:
-  mongodb-data:
+  mysql-data-clean:
+  mongodb-data-clean:
+  mongodb-secrets:
+    external: true
+    name: melodic-nosql_mongodb-secrets

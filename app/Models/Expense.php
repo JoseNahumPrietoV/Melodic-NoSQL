@@ -2,36 +2,46 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use MongoDB\Laravel\Eloquent\Model;
 
 class Expense extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'expense_id';
+    protected $connection = 'mongodb';
+
+    protected $attributes = [
+        'state' => 'pagado',
+        'from' => null,
+        'user_id' => null,
+    ];
 
     protected $fillable = [
         'amount',
         'state',
         'at',
         'user_id',
-        'from'
+        'from',
     ];
 
     protected $casts = [
         'at' => 'datetime',
-        'amount' => 'decimal:2'
+        'amount' => 'decimal:2',
     ];
+
+    protected function expenseId(): Attribute
+    {
+        return Attribute::get(fn () => $this->getKey());
+    }
 
     /**
      * Relación: Un gasto (retiro) pertenece a un usuario (Artista o Label)
-     *
-     * @return BelongsTo
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'user_id', 'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

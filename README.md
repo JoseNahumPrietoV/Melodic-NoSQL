@@ -165,6 +165,26 @@ Luego abre tu navegador y visita:
 http://localhost:8000
 ```
 
+### Entorno local con Docker
+
+El entorno local se puede levantar con Docker Compose. Este arranque crea los servicios de Laravel, MySQL y MongoDB; la aplicación usa MySQL como fuente relacional y deja MongoDB disponible para las siguientes etapas de la migración.
+
+Compose toma los secretos del `.env`: antes del primer arranque llena `APP_KEY`, `MONGO_ROOT_USERNAME`, `MONGO_ROOT_PASSWORD`, `MONGO_APP_PASSWORD`, `MONGO_READONLY_PASSWORD`, `MONGO_BACKUP_PASSWORD`, `MYSQL_PASSWORD` y `MYSQL_ROOT_PASSWORD` (sin estas variables no arranca). Genera las contraseñas con `openssl rand -hex 24`.
+
+MongoDB corre como replica set de un nodo (`rs0`), solo acepta conexiones TLS y necesita un keyFile y certificados locales, que no se versionan. Genéralos una sola vez antes del primer arranque:
+
+```bash
+./docker/mongo/generate-keyfile.sh
+./docker/mongo/tls/generate-certs.sh
+docker compose up --build --detach
+```
+
+Después abre [https://localhost](https://localhost): la app se sirve por HTTPS a través de Caddy, con un certificado de su CA interna (ver `docs/manual.md` para confiar en él). MySQL queda disponible solo en `127.0.0.1:3306`. MongoDB está en una red interna y no publica puertos; para usarlo desde el host en desarrollo, levanta el stack con `docker compose -f compose.yaml -f compose.localhost.yaml up --detach`, que lo publica solo en `127.0.0.1:27018`. Para detenerlos sin borrar los datos persistidos:
+
+```bash
+docker compose down
+```
+
 ---
 
 ## 👤 Usuarios de prueba

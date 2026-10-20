@@ -2,40 +2,69 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use MongoDB\Laravel\Eloquent\Model;
 
 class Playlist extends Model
 {
     use HasFactory;
 
+    public const MAX_SONGS = 500;
+
+    protected $connection = 'mongodb';
+
     protected $fillable = [
         'name',
         'user_id',
-        'path'
+        'path',
     ];
 
-    protected $primaryKey = 'playlist_id';
+    protected $attributes = [
+        'name' => 'Nueva playlist',
+        'description' => null,
+        'path' => null,
+        'songs' => [],
+    ];
 
-    /**
-     * Relación: Una playlist pertenece a un usuario
-     *
-     * @return BelongsTo
-     */
-    public function user(): BelongsTo
+    protected function playlistId(): Attribute
     {
-        return $this->belongsTo(User::class, 'user_id', 'user_id');
+        return Attribute::get(fn () => $this->getKey());
     }
 
-    /**
-     * Relación: Una playlist tiene muchas canciones
-     *
-     * @return BelongsToMany
-     */
-    public function songs(): BelongsToMany
+    protected function songsCount(): Attribute
     {
-        return $this->belongsToMany(Song::class, 'playlist_song', 'playlist_id', 'song_id');
+        return Attribute::get(fn () => count($this->songs));
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function songIds(): array
+    {
+        return array_column($this->songs, 'song_id');
+    }
+
+    public function songModels(): Collection
+    {
+        $position = array_flip($this->songIds());
+
+        return Song::with('album.artist')
+            ->whereIn('_id', $this->songIds())
+            ->get()
+            ->sortBy(fn (Song $song) => $position[$song->getKey()])
+            ->values();
+    }
+
+    public function addSong(string $songId): bool
+    {
+        return static::where('_id', $this->getKey())
+            ->where('songs.song_id', '!=', $songId)
+            ->where('songs.'.(self::MAX_SONGS - 1), 'exists', false)
+            ->push('songs', ['song_id' => $songId, 'added_at' => now()]) === 1;
     }
 }

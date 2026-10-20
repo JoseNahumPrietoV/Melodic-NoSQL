@@ -10,7 +10,8 @@ RUN composer install \
     --no-progress \
     --prefer-dist \
     --optimize-autoloader \
-    --no-dev
+    --no-dev \
+    --ignore-platform-req=ext-mongodb
 
 # Compilación de los recursos frontend
 FROM node:24-bookworm-slim AS assets
@@ -33,14 +34,20 @@ WORKDIR /var/www/html
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libsqlite3-dev \
+        libssl-dev \
         libzip-dev \
+        libonig-dev \
+        pkg-config \
         unzip \
     && docker-php-ext-install \
         bcmath \
         mbstring \
         pdo_sqlite \
+        pdo_mysql \
         zip \
-    && rm -rf /var/lib/apt/lists/*
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb \
+    && rm -rf /var/lib/apt/lists/* /tmp/pear
 
 COPY --from=vendor /var/www/html/vendor ./vendor
 COPY --from=assets /var/www/html/public/build ./public/build
@@ -56,4 +63,4 @@ USER www-data
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
+CMD ["sh", "-c", "for attempt in $(seq 1 30); do php artisan migrate --force && break; echo \"Waiting for database (attempt $attempt/30)...\"; sleep 2; done; php artisan migrate --path=database/migrations/mongodb --force; php artisan migrate:status >/dev/null || exit 1; exec php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]

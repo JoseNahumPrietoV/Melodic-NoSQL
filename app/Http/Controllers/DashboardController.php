@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Earning;
 use App\Models\Expense;
 use App\Models\Royalty;
 use App\Models\User;
@@ -10,8 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Song;
 use App\Models\Playlist;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
+use MongoDB\Collection;
 
 class DashboardController extends Controller
 {
@@ -22,13 +21,11 @@ class DashboardController extends Controller
      */
     public function user()
     {
-        $songs = Song::with('album.artist')
-            ->inRandomOrder()
-            ->take(6)
-            ->get();
+        $songs = Song::raw(fn (Collection $collection) => $collection->aggregate([['$sample' => ['size' => 6]]]))
+            ->load('album.artist');
 
         $user = Auth::user();
-        $playlists = $user->playlists()->withCount('songs')->latest()->get();
+        $playlists = $user->playlists()->latest()->get();
 
         return view('dashboards.user', [
             'songs'     => $songs,
@@ -45,7 +42,8 @@ class DashboardController extends Controller
     {
         $artist = Auth::user();
 
-        $albums = $artist->albums()->withCount('songs')->get();
+        $albums = $artist->albums()->with('songs')->get()
+            ->each(fn ($album) => $album->setAttribute('songs_count', $album->songs->count()));
 
         $currentBalance = 0.00;
         $withdrawals = collect();
@@ -118,10 +116,7 @@ class DashboardController extends Controller
         $songsQuery = Song::with('album.artist');
 
         if ($query) {
-            $songsQuery->where('name', 'LIKE', "%{$query}%")
-                ->orWhereHas('album.artist', function ($q) use ($query) {
-                    $q->where('username', 'LIKE', "%{$query}%");
-                });
+            $songsQuery->matching($query);
         } else {
             $songsQuery->latest();
         }
@@ -134,44 +129,4 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Logica de retiro para artistas independientes
-     *
-     * @return \Illuminate\Http\RedirectResponse
-     * @throws \Throwable
-     */
-    public function withdraw()
-    {
-        $user = Auth::user();
-
-        $royalty = Royalty::where('recipient_id', $user->user_id)->first();
-
-        if (!$royalty || $royalty->amount <= 0) {
-            return back()->with('error', 'No tienes fondos disponibles para retirar.');
-        }
-
-        DB::transaction(function () use ($royalty, $user) {
-            $totalAmount = $royalty->amount;
-            $platformShare = $totalAmount * 0.30;
-            $userPayout = $totalAmount * 0.70;
-
-            Expense::create([
-                'amount' => $userPayout,
-                'state'  => 'pagado',
-                'at'     => now(),
-            ]);
-
-            Earning::create([
-                'amount' => $platformShare,
-                'state'  => 'pagado',
-                'at'     => now(),
-            ]);
-
-            $royalty->amount = 0;
-            $royalty->last_payment = now();
-            $royalty->save();
-        });
-
-        return back()->with('success', '¡Retiro exitoso! Los fondos se han transferido.');
-    }
 }
