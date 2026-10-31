@@ -38,6 +38,8 @@ Melodic es una aplicación web. Lo que ves en el navegador lo genera un servidor
 
 Este proyecto **cambió esa base de datos**: antes usaba una base relacional (MySQL, organizada en tablas) y ahora usa **MongoDB**, que guarda la información como "documentos", parecidos a fichas. Por ejemplo, una playlist es una sola ficha que ya contiene la lista de sus canciones, en lugar de repartirse en varias tablas.
 
+La versión en línea funciona igual, pero en servicios en la nube: la aplicación corre en **Render** y los datos se guardan en **MongoDB Atlas**.
+
 Además se protegió el sistema:
 
 - La página se sirve por **HTTPS** (conexión cifrada, con candado en el navegador).
@@ -45,18 +47,32 @@ Además se protegió el sistema:
 - Los administradores pueden entrar a la base de datos únicamente por una **VPN** (un túnel privado).
 - Hay un **firewall** que deja pasar solo lo necesario.
 
-## 5. Probar Melodic en tu equipo
+## 5. Probar Melodic en línea
+
+Melodic está publicado en **https://melodic-app.onrender.com**. Para probarlo:
+
+1. Entra a la página y crea una cuenta de oyente o de artista con **Registrarse**.
+2. Como oyente, elige un plan en **Premium** y ya puedes explorar, escuchar y crear playlists.
+3. Como artista, sube tus canciones desde tu panel.
+
+Ten en cuenta:
+
+- La versión en línea usa un plan gratuito: si nadie la visitó en un rato, la primera página puede tardar cerca de un minuto en abrir.
+- Las cuentas de prueba de la sección 7 solo existen en la versión local. En línea cada quien crea la suya, y no hay cuenta de administrador ni de sello.
+- Las canciones y portadas que se suben en línea se borran cada vez que el servicio se reinicia o se actualiza.
+
+## 6. Probar Melodic en tu equipo
 
 Necesitas **Docker** y **Git**. Los comandos se escriben en una terminal, dentro de la carpeta del proyecto.
 
-### 5.1 Descargar el proyecto
+### 6.1 Descargar el proyecto
 
 ```bash
 git clone https://github.com/Theproxy206/Melodic-NoSQL.git
 cd Melodic-NoSQL
 ```
 
-### 5.2 Preparar las contraseñas
+### 6.2 Preparar las contraseñas
 
 El proyecto no trae contraseñas: cada quien genera las suyas. Estos comandos crean el archivo de configuración `.env` y lo llenan con contraseñas aleatorias:
 
@@ -69,14 +85,15 @@ for v in MONGO_ROOT_PASSWORD MONGO_APP_PASSWORD MONGO_READONLY_PASSWORD MONGO_BA
 done
 ```
 
-Después se generan las llaves de la base de datos (solo la primera vez):
+Después se generan las llaves de la base de datos y se guardan donde Docker las va a leer (solo la primera vez):
 
 ```bash
 ./docker/mongo/generate-keyfile.sh
 ./docker/mongo/tls/generate-certs.sh
+./docker/mongo/sync-secrets.sh
 ```
 
-### 5.3 Encender el sistema
+### 6.3 Encender el sistema
 
 ```bash
 docker compose up --build --detach
@@ -90,20 +107,19 @@ docker compose ps
 
 Deben aparecer `melodic-proxy`, `melodic-app`, `melodic-mongodb` y `melodic-mysql`.
 
-### 5.4 Crear las colecciones y los datos de ejemplo
+### 6.4 Crear las cuentas de prueba
+
+Al encender, el sistema ya prepara la base de datos y los planes de suscripción. Solo falta crear las cuatro cuentas de prueba:
 
 ```bash
-docker exec melodic-app php artisan migrate --path=database/migrations/mongodb --force
 docker exec melodic-app php artisan db:seed --force
 ```
 
-Esto crea las cuatro cuentas de prueba y los planes de suscripción.
-
-### 5.5 Abrir la página
+### 6.5 Abrir la página
 
 Entra a **https://localhost**. El navegador avisará que el certificado no es de confianza: es normal, porque es un certificado creado en tu propio equipo. Acepta continuar (o confía en él siguiendo la sección "HTTPS" de `docs/manual.md`).
 
-## 6. Recorrido guiado
+## 7. Recorrido guiado
 
 Cuentas de prueba:
 
@@ -117,7 +133,7 @@ Cuentas de prueba:
 ### Como artista
 
 1. Entra con `artist@melodic.com`. Llegas a tu panel.
-2. Crea un álbum y sube una canción (un archivo de audio y, si quieres, una portada).
+2. Crea un álbum y sube una canción: un archivo de audio de hasta 20 MB (mp3, wav, ogg, aac o m4a) y, si quieres, una portada.
 3. En el panel verás tus álbumes con el número de canciones y tu saldo.
 
 ### Como oyente
@@ -125,7 +141,7 @@ Cuentas de prueba:
 1. Entra con `user@melodic.com`. Como aún no tiene suscripción, el sistema te lleva a la página **Premium**.
 2. Elige un plan. Ya puedes usar la plataforma.
 3. En **Explorar** busca por nombre de canción o de artista y dale reproducir. Cada reproducción le paga al artista.
-4. En **Mis playlists** crea una playlist, ábrela y busca canciones para añadirlas. Si intentas añadir la misma canción dos veces, el sistema te avisa.
+4. En **Mis playlists** crea una playlist, ábrela y busca canciones para añadirlas. Una canción no se puede repetir en la misma playlist, y cada playlist admite hasta 500 canciones.
 
 ### Como sello
 
@@ -139,7 +155,7 @@ Cuentas de prueba:
 2. Verás el total de ingresos y egresos, la ganancia neta, la proyección y una gráfica con los ingresos de los últimos seis meses.
 3. Desde ahí puedes crear un sello nuevo.
 
-## 7. Comprobar que todo funciona
+## 8. Comprobar que todo funciona
 
 Estos comandos son opcionales, para quien quiera ver "por dentro" que la información está bien.
 
@@ -162,7 +178,7 @@ curl -sI -k https://localhost | head -1
 curl -sI http://localhost | head -2
 ```
 
-## 8. Apagar el sistema
+## 9. Apagar el sistema
 
 ```bash
 docker compose down
@@ -170,18 +186,22 @@ docker compose down
 
 La información se conserva para la próxima vez. Para volver a encenderlo basta con `docker compose up --detach`.
 
-## 9. Problemas comunes
+## 10. Problemas comunes
 
 | Qué pasa | Qué hacer |
 |---|---|
-| `docker compose up` dice que falta una variable (`... is required`) | Falta una contraseña en `.env`. Repite el paso 5.2 |
-| El navegador muestra "conexión no segura" | Es el certificado local. Acepta continuar o confía en él (paso 5.5) |
+| `docker compose up` dice que falta una variable (`... is required`) | Falta una contraseña en `.env`. Repite el paso 6.2 |
+| `docker compose up` dice `external volume "melodic-nosql_mongodb-secrets" not found` | Falta guardar las llaves: ejecuta `./docker/mongo/sync-secrets.sh` |
+| El navegador muestra "conexión no segura" | Es el certificado local. Acepta continuar o confía en él (paso 6.5) |
+| Una canción no sube | El archivo debe pesar como máximo 20 MB y ser mp3, wav, ogg, aac o m4a |
+| La página en línea tarda en abrir | El plan gratuito se duerme sin visitas; espera cerca de un minuto |
 | Al iniciar sesión aparece "demasiados intentos" | Por seguridad solo se permiten 5 intentos por minuto. Espera un minuto |
 | Después de actualizar el proyecto la página se ve igual o da error | Ejecuta `docker exec melodic-app php artisan view:clear` |
 | El oyente siempre termina en la página Premium | No tiene suscripción activa: elige un plan |
 
-## 10. Para saber más
+## 11. Para saber más
 
 - `docs/manual.md`: instalación y configuración paso a paso.
+- `docs/despliegue-render-atlas.md`: cómo está publicada la versión en línea.
 - `docs/mongodb/comandos.md`: comandos de operación (respaldos, usuarios, firewall, VPN).
 - `docs/informe-migracion-nosql.md`: informe técnico de la migración a MongoDB.

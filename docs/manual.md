@@ -41,9 +41,14 @@ Generar el keyFile y los certificados TLS de MongoDB (solo la primera vez):
 ```bash
 ./docker/mongo/generate-keyfile.sh
 ./docker/mongo/tls/generate-certs.sh
+./docker/mongo/sync-secrets.sh
 ```
 
-MongoDB solo acepta conexiones TLS. Para renovar los certificados, volver a correr `generate-certs.sh` y recrear los contenedores.
+`sync-secrets.sh` copia el keyFile, la CA y el certificado al volumen `melodic-nosql_mongodb-secrets`, que `compose.yaml` monta en `/run/secrets` (se usa un volumen en lugar de secretos de Compose para que funcione con SELinux). Sin ese volumen, `docker compose up` falla con `external volume "melodic-nosql_mongodb-secrets" not found`.
+
+MongoDB solo acepta conexiones TLS. Para renovar los certificados, volver a correr `generate-certs.sh` y `sync-secrets.sh` y recrear los contenedores.
+
+Los datos viven en los volúmenes `mysql-data-clean` y `mongodb-data-clean`. Al arrancar, la app crea las colecciones e índices de MongoDB y los planes de suscripción; las cuentas de prueba se agregan con `docker exec melodic-app php artisan db:seed --force`.
 
 Levantar, ver el estado, ver los logs y detener:
 
@@ -63,7 +68,7 @@ docker exec melodic-app php artisan view:clear
 
 `view:clear` borra las vistas compiladas del despliegue anterior, que el volumen `app-storage` conserva.
 
-El corte a MongoDB y su reversión están en `docs/mongodb/03-corte-y-reversion.md`.
+El corte a MongoDB y su reversión están en `docs/mongodb/03-corte-y-reversion.md`. El despliegue en Render con MongoDB Atlas está en `docs/despliegue-render-atlas.md`.
 
 | Servicio | Desde el host | Dentro de Docker |
 |---|---|---|
